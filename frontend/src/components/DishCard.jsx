@@ -1,17 +1,34 @@
 import React, { useState } from "react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext"; // Import AuthContext
+import { useNavigate, useLocation } from "react-router-dom"; // Import hooks
 import { PIZZA_ADD_ON } from "../constants"; 
 import AddOnModal from "./AddOnModal"; 
 
 const DishCard = ({ dish }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addToCart } = useCart();
+  const { user } = useAuth(); // Get user status
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Availability Check
   const isAvailable = dish?.isInStock;
 
+  // --- HELPER: Redirect if not logged in ---
+  const checkLoginAndRedirect = () => {
+    if (!user) {
+      // 🚀 Redirect to /login, saving the current page in state
+      navigate('/auth', { state: { from: location } });
+      return false;
+    }
+    return true;
+  };
+
   // --- LOGIC: Check for Pizza ---
   const handleOrderClick = () => {
+    if (!checkLoginAndRedirect()) return; // Stop if not logged in
+
     // Check category or title
     const isPizza = 
       (dish.category === "Pizza") || 
@@ -25,18 +42,19 @@ const DishCard = ({ dish }) => {
   };
 
   const handleAddBasic = () => {
+    if (!checkLoginAndRedirect()) return;
     addToCart(dish);
     setIsModalOpen(false);
   };
 
   // --- LOGIC: Add 2 SEPARATE items ---
   const handleAddWithAddOn = () => {
+    if (!checkLoginAndRedirect()) return;
+
     // 1. Add the Pizza as usual
     addToCart(dish); 
 
     // 2. Add the Cheese as a SEPARATE item
-    // We append the pizza title like "Extra Cheese (Paneer Pizza)"
-    // This allows the backend to know exactly which pizza this cheese belongs to.
     addToCart({
       ...PIZZA_ADD_ON,
       title: `Extra Cheese (${dish.title})`, 
@@ -68,9 +86,9 @@ const DishCard = ({ dish }) => {
             }}
           />
           {!isAvailable && (
-             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-               <span className="text-white font-bold border border-white px-2 py-1 rounded">SOLD OUT</span>
-             </div>
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="text-white font-bold border border-white px-2 py-1 rounded">SOLD OUT</span>
+            </div>
           )}
         </div>
 

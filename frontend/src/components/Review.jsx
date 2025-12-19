@@ -7,7 +7,8 @@ import customer3 from "../assets/customer3.jpeg";
 import customer4 from "../assets/customer4.jpeg";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaTimes } from "react-icons/fa";
-import reviewBg from "../assets/reviewbg.jpeg";
+// Make sure this matches your actual file name (reviewbg copy.jpeg or reviewbg.jpeg)
+import reviewBg from "../assets/reviewbg copy.jpeg"; 
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 50 },
@@ -43,24 +44,27 @@ const Review = () => {
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        className="relative py-20"
+        // Added scroll-mt-24 and overflow-hidden
+        className="relative py-20 overflow-hidden scroll-mt-24" 
       >
         {/* --- Background Image & Fade Overlays --- */}
-        <div className="absolute inset-0 -z-10">
+        {/* FIX: z-0 ensures it is behind text but in front of global background */}
+        <div className="absolute inset-0 z-0">
           <img
             src={reviewBg}
             alt="Review Background"
             className="h-full w-full object-cover"
           />
-          {/* --- NEW: Added gradient for cool finishing --- */}
+          {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black" />
-          {/* Original overlay (optional, but helps text readability) */}
+          {/* Dark Overlay */}
           <div className="absolute inset-0 bg-black/50" />
         </div>
         {/* --- End of Background --- */}
 
-        {/* --- Inner container for all your content --- */}
-        <div className="container mx-auto px-4">
+        {/* --- Inner container --- */}
+        {/* FIX: z-10 ensures text sits ON TOP of the background image */}
+        <div className="container mx-auto px-4 relative z-10">
           {/* Review Content */}
           <motion.div variants={fadeInUp} className="flex flex-col">
             <motion.p
@@ -104,7 +108,7 @@ const Review = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.2 }}
                 whileHover={{ scale: 1.05, rotate: 2 }}
-                className="h-[300px] w-[200px] rounded-br-3xl rounded-t-3xl object-cover cursor-pointer"
+                className="h-[300px] w-[200px] rounded-br-3xl rounded-t-3xl object-cover cursor-pointer shadow-lg border border-white/10"
                 viewport={{ once: true }}
                 alt="Customer photo"
                 onClick={() => setSelectedImage(customer)}
@@ -115,7 +119,7 @@ const Review = () => {
         {/* --- End of inner container --- */}
       </motion.section>
 
-      {/* Modal (no changes) */}
+      {/* Modal */}
       <AnimatePresence>
         {selectedImage && (
           <motion.div
@@ -127,7 +131,7 @@ const Review = () => {
             onClick={() => setSelectedImage(null)}
           >
             <motion.button
-              className="absolute top-5 right-5 z-50 text-white hover:text-primary transition-colors"
+              className="absolute top-5 right-5 z-50 text-white hover:text-rose-500 transition-colors cursor-pointer"
               onClick={() => setSelectedImage(null)}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1, transition: { delay: 0.2 } }}
@@ -143,7 +147,7 @@ const Review = () => {
               <img
                 src={selectedImage}
                 alt="Enlarged customer view"
-                className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl"
+                className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl border border-white/20"
               />
             </motion.div>
           </motion.div>

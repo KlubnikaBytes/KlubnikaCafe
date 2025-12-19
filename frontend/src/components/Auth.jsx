@@ -1,10 +1,8 @@
-// frontend/src/components/Auth.jsx
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Loader from './Loader';
 
 const formVariants = {
@@ -17,10 +15,9 @@ const inputVariants = {
 };
 
 const Auth = () => {
-  // --- STATE MANAGEMENT ---
   const [isLoginMode, setIsLoginMode] = useState(true);
-  const [loginMethod, setLoginMethod] = useState('password'); // 'password' or 'otp'
-  const [step, setStep] = useState('credentials'); // 'credentials', 'otp', or 'loginOtp'
+  const [loginMethod, setLoginMethod] = useState('password'); 
+  const [step, setStep] = useState('credentials'); 
   
   const [formData, setFormData] = useState({
     name: '',
@@ -34,19 +31,20 @@ const Auth = () => {
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // --- RESEND TIMER STATE ---
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
 
-  // --- HOOKS ---
   const { login, sendSignupOtp, verifySignup, sendLoginOtp, loginWithOtp } = useAuth();
   const { mergeAndFetchCart } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // 🚀 REDIRECT LOGIC: If they came from another page (like Dishes), go back there.
+  // Otherwise, go to home ('/').
+  const from = location.state?.from?.pathname || "/";
   
-  // --- TIMER LOGIC ---
   useEffect(() => {
     let interval;
-    // Only run timer if we are in an OTP step and timer > 0
     if ((step === 'otp' || step === 'loginOtp') && timer > 0) {
       setCanResend(false);
       interval = setInterval(() => {
@@ -58,7 +56,6 @@ const Auth = () => {
     return () => clearInterval(interval);
   }, [timer, step]);
 
-  // Reset timer when entering OTP step
   useEffect(() => {
     if (step === 'otp' || step === 'loginOtp') {
       setTimer(30);
@@ -66,11 +63,8 @@ const Auth = () => {
     }
   }, [step]);
 
-  // --- HANDLERS ---
-
   const handleToggleMode = () => {
     setIsLoginMode((prev) => !prev);
-    // Reset all states
     setFormData({ name: '', email: '', password: '', mobile: '', verifyMethod: 'email' });
     setError(null);
     setMessage(null);
@@ -85,22 +79,15 @@ const Auth = () => {
 
   const handleResendOtp = async () => {
     if (!canResend) return;
-    
-    setError(null);
-    setMessage(null);
-    setLoading(true);
-    
+    setError(null); setMessage(null); setLoading(true);
     try {
       if (isLoginMode && step === 'loginOtp') {
-        // Resend for Login
         const data = await sendLoginOtp(formData.mobile);
         setMessage(data.message || 'OTP Resent!');
       } else if (!isLoginMode && step === 'otp') {
-        // Resend for Signup
         const data = await sendSignupOtp(formData);
         setMessage(data.message || 'OTP Resent!');
       }
-      // Reset Timer
       setTimer(30);
       setCanResend(false);
     } catch (err) {
@@ -112,7 +99,6 @@ const Auth = () => {
 
   // --- SUBMIT FUNCTIONS ---
 
-  // 1. Signup: Get OTP
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setError(null); setMessage(null); setLoading(true);
@@ -127,34 +113,27 @@ const Auth = () => {
     }
   };
 
-  // 2. Signup: Verify OTP & AUTO LOGIN
   const handleSignupOtpSubmit = async (e) => {
     e.preventDefault();
     setError(null); setMessage(null); setLoading(true);
     
     try {
-      // A. Verify the OTP
-      // We pass both email and mobile so the backend can check whichever was used
       await verifySignup({ 
         email: formData.email, 
         mobile: formData.mobile,
         otp 
       });
 
-      // B. Auto-Login immediately
-      // We use the password the user just created in the previous step
       const loginData = await login({ 
         email: formData.email, 
         password: formData.password 
       });
 
-      // C. Merge Cart & Redirect
       await mergeAndFetchCart(loginData.token);
-      
       setMessage('Signup successful! Redirecting...');
       
-      // Navigate to home immediately
-      navigate('/');
+      // 🚀 REDIRECT BACK
+      navigate(from, { replace: true });
       
     } catch (err) {
       setError(err.message || 'Verification or Auto-login failed.');
@@ -163,14 +142,16 @@ const Auth = () => {
     }
   };
 
-  // 3. Login: Password
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError(null); setMessage(null); setLoading(true);
     try {
       const data = await login({ email: formData.email, password: formData.password });
       await mergeAndFetchCart(data.token); 
-      navigate('/');
+      
+      // 🚀 REDIRECT BACK
+      navigate(from, { replace: true });
+
     } catch (err) {
       setError(err.message || 'An error occurred.');
     } finally {
@@ -178,7 +159,6 @@ const Auth = () => {
     }
   };
 
-  // 4. Login: Send Mobile OTP
   const handleSendLoginOtp = async (e) => {
     e.preventDefault();
     setError(null); setMessage(null); setLoading(true);
@@ -193,14 +173,16 @@ const Auth = () => {
     }
   };
 
-  // 5. Login: Verify Mobile OTP
   const handleVerifyLoginOtp = async (e) => {
     e.preventDefault();
     setError(null); setMessage(null); setLoading(true);
     try {
       const data = await loginWithOtp(formData.mobile, otp);
       await mergeAndFetchCart(data.token);
-      navigate('/');
+      
+      // 🚀 REDIRECT BACK
+      navigate(from, { replace: true });
+
     } catch (err) {
       setError(err.message || 'Invalid OTP or Login Failed');
     } finally {
@@ -211,19 +193,16 @@ const Auth = () => {
   return (
     <>
       {loading && <Loader />}
-
       <motion.div
         className="container mx-auto min-h-screen flex items-center justify-center px-4"
         initial="hidden" animate="visible" variants={formVariants}
       >
         <div className="w-full max-w-md p-8 bg-neutral-800/50 backdrop-blur-lg rounded-2xl shadow-xl flex flex-col items-center">
           
-          {/* HEADER */}
           <h2 className="text-3xl lg:text-4xl font-extrabold text-white text-center mb-8 w-full">
             {isLoginMode ? 'Welcome Back' : step === 'credentials' ? 'Create Account' : 'Verify Account'}
           </h2>
           
-          {/* ALERTS */}
           {error && <motion.p className="text-center text-red-400 mb-4 w-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{error}</motion.p>}
           {message && <motion.p className="text-center text-green-400 mb-4 w-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{message}</motion.p>}
 
@@ -231,7 +210,7 @@ const Auth = () => {
           {isLoginMode && (
             <div className="w-full flex flex-col items-center">
               
-              {/* Toggle Login Method (Password vs OTP) */}
+              {/* Toggle Login Method */}
               {step !== 'loginOtp' && (
                 <div className="flex gap-6 mb-6 border-b border-neutral-600 pb-2 w-full justify-center">
                   <button 
@@ -282,7 +261,6 @@ const Auth = () => {
                     <label className="block text-sm font-medium text-neutral-300 mb-1">Enter OTP sent to {formData.mobile}</label>
                     <input type="text" name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} required className="input-field" placeholder="6-digit OTP" />
                     
-                    {/* RESEND LINK */}
                     <div className="mt-2 text-right">
                       <button 
                         type="button" 
@@ -342,7 +320,6 @@ const Auth = () => {
                 <label className="block text-sm font-medium text-neutral-300 mb-1">OTP</label>
                 <input type="text" name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} required className="input-field" placeholder="Enter 6-digit OTP" />
                 
-                {/* RESEND LINK */}
                 <div className="mt-2 text-right">
                   <button 
                     type="button" 
@@ -359,7 +336,6 @@ const Auth = () => {
             </form>
           )}
 
-          {/* FOOTER TOGGLE */}
           <p className="mt-8 text-center text-neutral-400">
             {isLoginMode ? "Don't have an account?" : 'Already have an account?'}
             <button onClick={handleToggleMode} className="ml-2 font-medium text-primary hover:underline focus:outline-none cursor-pointer">

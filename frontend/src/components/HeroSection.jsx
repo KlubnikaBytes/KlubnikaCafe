@@ -5,29 +5,23 @@ const HeroSection = () => {
   return (
     <section
       id="hero"
-      // Keep it relative and centered. 
-      // We removed pt-[5rem] previously, keep it removed so it centers perfectly.
       className="relative flex items-center justify-center overflow-hidden"
-      style={{ 
-        // ⭐ FINAL FIX: Use 'svh' (Small Viewport Height). 
-        // This sets the height to fit the screen WITH the mobile address bar visible.
-        // It prevents the "jump" when scrolling because it doesn't try to resize dynamically.
-        height: '100svh' 
-      }} 
+      style={{ height: '100svh' }}
     >
-      {/* Background */}
-      <div className="absolute inset-0 -z-20">
+      {/* Background Image Layer */}
+      <div className="absolute inset-0 z-0">
         <img
           src={imgSrc}
-          className="w-full h-full object-cover object-center"
+          // ADDED 'scale-110' to zoom the image in slightly
+          className="w-full h-full object-cover object-center scale-110"
           alt="Background"
         />
       </div>
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/10 via-black/30 to-black/80"></div>
+      {/* Gradient Overlay Layer */}
+      <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/10 via-black/30 to-black/80"></div>
 
-      {/* Hero Content */}
+      {/* Text Content Layer */}
       <div className="relative z-20 flex flex-col items-center justify-center text-center px-4">
         <motion.h1
           initial={{ opacity: 0, y: 40 }}

@@ -5,7 +5,10 @@ import { motion } from "framer-motion";
 
 const About = () => {
   return (
-    <section className="container mx-auto mb-8 px-4 lg:px-0" id="about">
+    <section 
+      id="about" 
+      className="container mx-auto mb-8 px-4 lg:px-0 scroll-mt-24" // Added scroll-mt-24
+    >
       {/* Section Title Animation */}
       <motion.h2
         initial={{ opacity: 0, y: -50 }}

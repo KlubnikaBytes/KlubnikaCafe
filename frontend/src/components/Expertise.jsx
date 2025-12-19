@@ -1,5 +1,3 @@
-// src/components/Expertise.jsx
-
 import React from "react";
 import { CUSINES } from "../constants";
 import { motion } from "framer-motion";
@@ -24,7 +22,7 @@ const Expertise = () => {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      className="container mx-auto px-4"
+      className="container mx-auto px-4 scroll-mt-24" // Added scroll-mt-24
     >
       {/* Section Title Animation */}
       <motion.h2
@@ -53,7 +51,6 @@ const Expertise = () => {
               <motion.img
                 src={cusine.image}
                 alt={cusine.title}
-                // --- THIS IS THE CHANGED LINE ---
                 className="w-full h-64 object-cover rounded-3xl shadow-lg"
                 whileHover={{ scale: 1.05, rotate: 2 }}
                 transition={{ duration: 0.3 }}

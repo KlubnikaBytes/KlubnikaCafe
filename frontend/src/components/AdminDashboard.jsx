@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminInventory from './AdminInventory';
 import AdminOrderDashboard from './AdminOrderDashboard';
+import AdminInvoices from './AdminInvoices';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('orders');
@@ -18,13 +19,12 @@ const AdminDashboard = () => {
     navigate('/admin');
   };
 
-  // --- EFFECT 1: Global Session Timeout (Runs once on mount) ---
+  // --- EFFECT 1: Global Session Timeout ---
   useEffect(() => {
     const initSession = () => {
       const now = Date.now();
       let startTime = localStorage.getItem('adminSessionStart');
 
-      // Initialize session start if missing
       if (!startTime) {
         startTime = now.toString();
         localStorage.setItem('adminSessionStart', startTime);
@@ -32,13 +32,11 @@ const AdminDashboard = () => {
 
       const elapsed = now - parseInt(startTime, 10);
 
-      // Check if session is already expired
       if (elapsed >= SESSION_DURATION) {
         setShowTimeoutModal(true);
         return;
       }
 
-      // Schedule the "Time's Up" popup
       const remainingTime = SESSION_DURATION - elapsed;
       const logoutTimeout = setTimeout(() => {
         setShowTimeoutModal(true);
@@ -48,16 +46,14 @@ const AdminDashboard = () => {
     };
 
     return initSession();
-  }, []); // Empty dependency = Runs once per page load
+  }, []);
 
-  // --- EFFECT 2: Auto-Reload (Runs ONLY when activeTab changes) ---
+  // --- EFFECT 2: Auto-Reload (Optimized for activeTab) ---
   useEffect(() => {
     let reloadTimer;
 
-    // Only start the reload timer if we are on the 'orders' tab
     if (activeTab === 'orders') {
       reloadTimer = setInterval(() => {
-        // Double check session hasn't expired before reloading
         const currentElapsed = Date.now() - parseInt(localStorage.getItem('adminSessionStart') || '0', 10);
         
         if (currentElapsed < SESSION_DURATION) {
@@ -66,27 +62,26 @@ const AdminDashboard = () => {
       }, RELOAD_INTERVAL);
     }
 
-    // Cleanup: If user switches to 'inventory', this clears the timer immediately
     return () => {
       if (reloadTimer) clearInterval(reloadTimer);
     };
-  }, [activeTab]); // Dependency: Re-runs whenever activeTab changes
+  }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 relative">
+    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 relative">
       
       {/* --- TIMEOUT POPUP --- */}
       {showTimeoutModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-red-600 text-center max-w-md w-full">
-            <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h2 className="text-3xl font-bold mb-2">Session Timed Out</h2>
-            <p className="text-gray-400 mb-8">
-              Your session has expired for security reasons. Please login again.
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100] p-4">
+          <div className="bg-gray-800 p-6 md:p-8 rounded-xl shadow-2xl border border-red-600 text-center max-w-md w-full animate-in fade-in zoom-in duration-300">
+            <div className="text-red-500 text-5xl md:text-6xl mb-4">⚠️</div>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">Session Timed Out</h2>
+            <p className="text-gray-400 mb-8 text-sm md:text-base">
+              Your session has expired for security reasons. Please login again to continue.
             </p>
             <button
               onClick={handleLogout}
-              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition text-lg"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition text-lg active:scale-95"
             >
               Go to Login
             </button>
@@ -95,54 +90,83 @@ const AdminDashboard = () => {
       )}
 
       {/* --- DASHBOARD CONTENT --- */}
-      <div className={`max-w-7xl mx-auto ${showTimeoutModal ? 'blur-sm' : ''}`}>
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-extrabold">Admin Dashboard</h1>
+      <div className={`max-w-7xl mx-auto transition-all duration-500 ${showTimeoutModal ? 'blur-md pointer-events-none scale-95' : ''}`}>
+        
+        {/* Header Section: Stack on mobile, Row on Desktop */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Admin Portal</h1>
           
-          <div className="flex items-center gap-4">
-             <span className={`text-xs px-2 py-1 rounded border uppercase tracking-widest ${
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <span className={`text-[10px] md:text-xs px-2 py-1 rounded border uppercase tracking-widest font-medium ${
                activeTab === 'orders' 
-                 ? 'text-green-400 border-green-400' 
-                 : 'text-gray-500 border-gray-600'
+                 ? 'text-green-400 border-green-400/50 bg-green-400/10' 
+                 : 'text-gray-500 border-gray-700 bg-gray-800'
              }`}>
-               {activeTab === 'orders' ? 'Auto-Refresh: ON (30s)' : 'Auto-Refresh: PAUSED'}
+               {activeTab === 'orders' ? 'Live Auto-Refresh: 30s' : 'Refresh: Paused'}
             </span>
             <button
               onClick={handleLogout}
-              className="px-6 py-2 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 transition"
+              className="flex-1 md:flex-none px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 border border-gray-700 transition active:bg-gray-900"
             >
-              Logout Now
+              Logout
             </button>
           </div>
         </div>
         
-        {/* --- Tab Navigation --- */}
-        <div className="flex space-x-4 border-b border-gray-700 mb-8">
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`py-3 px-6 text-xl font-semibold ${
-              activeTab === 'orders' 
-                ? 'border-b-2 border-primary text-primary' 
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Live Orders
-          </button>
-          <button
-            onClick={() => setActiveTab('inventory')}
-            className={`py-3 px-6 text-xl font-semibold ${
-              activeTab === 'inventory' 
-                ? 'border-b-2 border-primary text-primary' 
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Inventory
-          </button>
+        {/* --- Tab Navigation: Scrollable on mobile --- */}
+        <div className="flex overflow-x-auto no-scrollbar border-b border-gray-800 mb-6 md:mb-8 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex space-x-2 md:space-x-4 min-w-max">
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`py-3 px-4 md:px-6 text-base md:text-xl font-semibold transition-all relative ${
+                activeTab === 'orders' 
+                  ? 'text-primary' 
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Live Orders
+              {activeTab === 'orders' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary animate-in slide-in-from-left duration-300" />}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('inventory')}
+              className={`py-3 px-4 md:px-6 text-base md:text-xl font-semibold transition-all relative ${
+                activeTab === 'inventory' 
+                  ? 'text-primary' 
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Inventory
+              {activeTab === 'inventory' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary animate-in slide-in-from-left duration-300" />}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('invoices')}
+              className={`py-3 px-4 md:px-6 text-base md:text-xl font-semibold transition-all relative ${
+                activeTab === 'invoices' 
+                  ? 'text-primary' 
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Invoices
+              {activeTab === 'invoices' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary animate-in slide-in-from-left duration-300" />}
+            </button>
+          </div>
         </div>
 
         {/* --- Tab Content --- */}
-        {activeTab === 'orders' ? <AdminOrderDashboard /> : <AdminInventory />}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {activeTab === 'orders' && <AdminOrderDashboard />}
+          {activeTab === 'inventory' && <AdminInventory />}
+          {activeTab === 'invoices' && <AdminInvoices />}
+        </div>
       </div>
+
+      {/* Global CSS to hide scrollbar on mobile tab nav */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
     </div>
   );
 };

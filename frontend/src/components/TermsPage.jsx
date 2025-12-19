@@ -1,6 +1,5 @@
-// src/components/TermsPage.jsx
 import React from "react";
-import PolicyLayout from "./PolicyLayout"; // Assuming you will create this
+import PolicyLayout from "./PolicyLayout";
 import { motion } from "framer-motion";
 
 const TermsPage = () => {
@@ -13,7 +12,7 @@ const TermsPage = () => {
         className="space-y-6"
       >
         <p className="text-neutral-400">
-          **Last Updated: 12th December 2025**
+          <strong>Last Updated: 16th December 2025</strong>
         </p>
 
         <section>
@@ -27,6 +26,9 @@ const TermsPage = () => {
           <h3 className="text-xl font-semibold mb-2 text-rose-400">2. Ordering and Payment</h3>
           <p>
             All orders placed through the website are subject to availability and confirmation of the order price. Payment must be made at the time of placing the order. We use Razorpay for processing payments.
+          </p>
+          <p className="mt-2 text-sm text-neutral-400">
+             For details regarding order cancellations, returns, and refunds, please refer to our <a href="/refund" className="text-rose-400 underline">Cancellation and Refund Policy</a>.
           </p>
         </section>
         
@@ -43,25 +45,16 @@ const TermsPage = () => {
             Klubnika Café reserves the right to change these terms at any time. Your continued use of the site following any changes constitutes your acceptance of the new terms.
           </p>
         </section>
+        
+        <section>
+            <h3 className="text-xl font-semibold mb-2 text-rose-400">5. Contact Information</h3>
+            <p>
+                If you have any questions about these Terms, please contact us at <strong>nguria7@gmail.com</strong>.
+            </p>
+        </section>
       </motion.div>
     </PolicyLayout>
   );
 };
 
 export default TermsPage;
-
-// NOTE: You will need to create a simple PolicyLayout component to wrap all these pages.
-// If you don't have it, use the structure from the next file's import.
-// For now, assume this is what PolicyLayout gives you:
-/*
-const PolicyLayout = ({ title, children }) => (
-  <div className="min-h-[60vh] pt-28 pb-10 px-4 sm:px-6 lg:px-8 bg-neutral-900">
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold mb-8 text-rose-500 text-center">{title}</h2>
-      <div className="bg-neutral-800 p-6 sm:p-10 rounded-lg shadow-xl text-neutral-300">
-        {children}
-      </div>
-    </div>
-  </div>
-);
-*/

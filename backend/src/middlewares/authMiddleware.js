@@ -1,22 +1,20 @@
-// backend/src/middlewares/authMiddleware.js
-
 const jwt = require('jsonwebtoken');
 
-// --- This is your original function for REGULAR users ---
+// --- Regular User Auth ---
 function authenticateToken(req, res, next) {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Adds user info (like ID) to the request object
+    req.user = decoded; 
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
   }
 }
 
-// --- This is the NEW function for ADMINS ---
+// --- Admin Auth ---
 function authenticateAdmin(req, res, next) {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'No admin token provided' });
@@ -26,7 +24,7 @@ function authenticateAdmin(req, res, next) {
     
     // Check for the specific admin flag
     if (decoded.isAdmin) {
-      req.user = decoded; // Adds admin info
+      req.user = decoded; 
       next();
     } else {
       res.status(403).json({ error: 'Access denied. Admin only.' });
@@ -36,5 +34,4 @@ function authenticateAdmin(req, res, next) {
   }
 }
 
-// --- Make sure to export BOTH ---
 module.exports = { authenticateToken, authenticateAdmin };

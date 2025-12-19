@@ -1,4 +1,3 @@
-// backend/src/controllers/paymentController.js
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Product = require("../models/Product.js");
@@ -12,6 +11,8 @@ const instance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+
+// --- HELPER FUNCTIONS ---
 
 // Helper: Normalize titles
 const getCleanItemTitle = (title) => {
@@ -28,6 +29,9 @@ const parsePrice = (priceStr) => {
   return parseFloat(priceStr.toString().replace(/[^0-9.]/g, ""));
 };
 
+// --- CONTROLLERS ---
+
+// @desc    1. Create Razorpay Order ID (Includes 5% GST)
 exports.createOrder = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -38,9 +42,8 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ error: "Your cart is empty." });
     }
 
-    const uniqueTitles = [
-      ...new Set(cartItems.map((item) => getCleanItemTitle(item.title))),
-    ];
+    // Check Stock
+    const uniqueTitles = [...new Set(cartItems.map((item) => getCleanItemTitle(item.title)))];
     const products = await Product.find({ name: { $in: uniqueTitles } });
     const stockMap = new Map();
     products.forEach((p) => stockMap.set(p.name, p.isInStock));
@@ -54,24 +57,24 @@ exports.createOrder = async (req, res) => {
     }
 
     if (unavailableItems.length > 0) {
-      return res
-        .status(400)
-        .json({ error: `Items sold out: ${unavailableItems.join(", ")}` });
+      return res.status(400).json({ error: `Items sold out: ${unavailableItems.join(", ")}` });
     }
 
-    const calculatedTotal = cartItems.reduce((acc, item) => {
+    // --- GST CALCULATION ---
+    const subTotal = cartItems.reduce((acc, item) => {
       const priceValue = parsePrice(item.price);
       return acc + priceValue * item.quantity;
     }, 0);
 
-    if (isNaN(calculatedTotal) || calculatedTotal <= 0) {
-      return res
-        .status(400)
-        .json({ error: "Invalid total amount calculated." });
+    const gstAmount = Math.round(subTotal * 0.05 * 100) / 100; // 5% GST
+    const totalWithGst = subTotal + gstAmount;
+
+    if (isNaN(totalWithGst) || totalWithGst <= 0) {
+      return res.status(400).json({ error: "Invalid total amount calculated." });
     }
 
     const options = {
-      amount: Math.round(calculatedTotal * 100),
+      amount: Math.round(totalWithGst * 100), // Convert to paise for Razorpay
       currency: "INR",
       receipt: `receipt_order_${new Date().getTime()}`,
     };
@@ -86,6 +89,7 @@ exports.createOrder = async (req, res) => {
   }
 };
 
+// @desc    2. Verify Razorpay Payment (Online) & Create Order
 exports.verifyPayment = async (req, res) => {
   const {
     razorpay_order_id,
@@ -93,149 +97,313 @@ exports.verifyPayment = async (req, res) => {
     razorpay_signature,
     deliveryAddress,
     deliveryCoords,
+    orderType,   // Optional: 'Delivery' or 'Dine-in'
+    tableNumber  // Optional: If Dine-in
   } = req.body;
 
   const secret = process.env.RAZORPAY_KEY_SECRET;
   const io = req.io;
 
+  // 1. Verify Signature
   const shasum = crypto.createHmac("sha256", secret);
   shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
   const digest = shasum.digest("hex");
 
   if (digest !== razorpay_signature) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid signature." });
+    return res.status(400).json({ success: false, message: "Invalid signature." });
   }
 
   try {
+    // 2. Fetch Payment Details from Razorpay
     const paymentDetails = await instance.payments.fetch(razorpay_payment_id);
     if (paymentDetails.status !== "captured") {
-      return res
-        .status(400)
-        .json({ success: false, message: "Payment not captured" });
+      return res.status(400).json({ success: false, message: "Payment not captured" });
     }
 
+    // Determine Method string
     let payMethod = paymentDetails.method;
     if (payMethod === "wallet") payMethod = `Wallet (${paymentDetails.wallet})`;
     if (payMethod === "emi") payMethod = "Pay Later / EMI";
-    if (payMethod === "card")
-      payMethod = `${paymentDetails.card.network} Card`;
+    if (payMethod === "card") payMethod = `${paymentDetails.card.network} Card`;
+    if (payMethod === "upi") payMethod = `UPI (${paymentDetails.vpa})`;
 
     const user = await User.findById(req.user.id);
     const validCartItems = user.cart;
     const amountPaid = paymentDetails.amount / 100;
 
+    // --- REVERSE CALCULATE GST FOR STORAGE ---
+    const subTotal = Math.round((amountPaid / 1.05) * 100) / 100;
+    const gstAmount = Math.round((amountPaid - subTotal) * 100) / 100;
+
+    // 3. Create Order in DB
     const newOrder = new Order({
       user: user._id,
       items: validCartItems,
+      subTotal: subTotal,
+      gstAmount: gstAmount,
       totalAmount: amountPaid,
       status: "Pending",
+      
+      orderType: orderType || 'Delivery',
+      tableNumber: (orderType === 'Dine-in') ? tableNumber : undefined,
+      
       deliveryAddress: deliveryAddress,
       deliveryCoords: deliveryCoords,
+      
       paymentId: razorpay_payment_id,
       razorpayOrderId: razorpay_order_id,
       paymentMethod: payMethod,
     });
 
     await newOrder.save();
+    
+    // Clear Cart
     user.cart = [];
     await user.save();
-    await newOrder.populate("user", "name email mobile");
-
-    // --- SMS LOGIC ---
-    // MUST BE EXACT WHITELISTED STATIC URL FROM YOUR SCREENSHOT
-    const invoiceLink = "https://www.klubnikacafe.com/api/orders";
-    const shortOrderId = newOrder._id.toString().slice(-6).toUpperCase();
-
-    // A. SMS
-    sendBillSMS(user.mobile, amountPaid, shortOrderId, invoiceLink).catch(
-      (err) => console.error("SMS Failed:", err.message)
-    );
-
-    // B. EMAIL (Sends PDF attachment)
-    const emailSubject = `Total Amount Paid #${shortOrderId}`;
-    const itemsHtml = validCartItems
-      .map(
-        (item) => `
-      <tr>
-        <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; color: #374151;">${item.title}</td>
-        <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6b7280;">${item.quantity}</td>
-        <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151; font-weight: 600;">₹${item.price}</td>
-      </tr>`
-      )
-      .join("");
-
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <body style="margin: 0; padding: 0; font-family: sans-serif; background-color: #ffffff;">
-        <div style="max-width: 600px; margin: 20px auto; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
-          <div style="background-color: #f43f5e; padding: 40px 20px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Order Confirmed!</h1>
-            <p style="color: #ffe4e6; margin: 10px 0 0 0;">Thanks for dining with Klubnika</p>
-          </div>
-          <div style="padding: 40px 30px;">
-            <p style="font-size: 18px; color: #374151;">Hi <strong>${user.name}</strong>,</p>
-            <p style="color: #6b7280;">We've received your order. Here is your receipt:</p>
-            <div style="background-color: #f9fafb; padding: 25px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #f3f4f6;">
-              <p style="margin: 0; color: #4b5563;"><strong>Order ID:</strong> #${shortOrderId}</p>
-              <p style="margin: 5px 0 0 0; color: #4b5563;"><strong>Transaction ID:</strong> ${razorpay_payment_id}</p>
-            </div>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-              <thead>
-                <tr>
-                  <th style="text-align: left; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">ITEM</th>
-                  <th style="text-align: center; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">QTY</th>
-                  <th style="text-align: right; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">PRICE</th>
-                </tr>
-              </thead>
-              <tbody>${itemsHtml}</tbody>
-            </table>
-            <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: right;">
-              <span style="font-weight: 700; color: #374151; margin-right: 20px;">Total Amount</span>
-              <span style="font-weight: 800; font-size: 24px; color: #f43f5e;">₹${amountPaid}</span>
-            </div>
-            <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
-              Your invoice PDF is attached to this email. You can also view it anytime from My Orders on the website.
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Generate PDF buffer for attachment
-    const orderForPdf = await Order.findById(newOrder._id).populate(
-      "user",
-      "name email mobile"
-    );
-    const pdfBuffer = await generateInvoicePdfBuffer(orderForPdf);
-
-    // sendEmail sends the proper PDF attachment
-    await sendEmail(
-      user.email,
-      emailSubject,
-      `Your order for ₹${amountPaid} is confirmed.`,
-      emailHtml,
-      [
-        {
-          filename: `invoice-${newOrder._id}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf",
-        },
-      ]
-    );
-
-    if (io) io.to("admins").emit("newOrder", orderForPdf);
-
+    
+    // Respond immediately
     res.json({
       success: true,
       message: "Order created successfully",
       orderId: newOrder._id,
     });
+
+    // Background Tasks
+    (async () => {
+      try {
+        await newOrder.populate("user", "name email mobile");
+
+        // 1. Socket to Admin
+        if (io) io.to("admins").emit("newOrder", newOrder);
+
+        // 2. SMS Logic
+        const shortOrderId = newOrder._id.toString().slice(-6).toUpperCase();
+        const invoiceLink = "https://www.klubnikacafe.com/api/orders";
+
+        sendBillSMS(user.mobile, amountPaid, shortOrderId, invoiceLink).catch(
+          (err) => console.error("Background SMS Failed:", err.message)
+        );
+
+        // 3. Email Logic (with Breakdown)
+        const emailSubject = `Total Amount Paid #${shortOrderId}`;
+        const itemsHtml = validCartItems
+          .map(
+            (item) => `
+          <tr>
+            <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; color: #374151;">${item.title}</td>
+            <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6b7280;">${item.quantity}</td>
+            <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151; font-weight: 600;">₹${item.price}</td>
+          </tr>`
+          )
+          .join("");
+
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <body style="margin: 0; padding: 0; font-family: sans-serif; background-color: #ffffff;">
+            <div style="max-width: 600px; margin: 20px auto; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
+              <div style="background-color: #f43f5e; padding: 40px 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Order Confirmed!</h1>
+                <p style="color: #ffe4e6; margin: 10px 0 0 0;">Thanks for dining with Klubnika</p>
+              </div>
+              <div style="padding: 40px 30px;">
+                <p style="font-size: 18px; color: #374151;">Hi <strong>${user.name}</strong>,</p>
+                
+                <div style="background-color: #f9fafb; padding: 25px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #f3f4f6;">
+                  <p style="margin: 0; color: #4b5563;"><strong>Order ID:</strong> #${shortOrderId}</p>
+                  <p style="margin: 5px 0 0 0; color: #4b5563;"><strong>Transaction ID:</strong> ${razorpay_payment_id}</p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">ITEM</th>
+                      <th style="text-align: center; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">QTY</th>
+                      <th style="text-align: right; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">PRICE</th>
+                    </tr>
+                  </thead>
+                  <tbody>${itemsHtml}</tbody>
+                </table>
+                
+                <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: right;">
+                  <p style="margin: 0; color: #6b7280;">Subtotal: ₹${subTotal}</p>
+                  <p style="margin: 5px 0; color: #6b7280;">GST (5%): ₹${gstAmount}</p>
+                  <span style="font-weight: 700; color: #374151; margin-right: 20px;">Total Amount Paid</span>
+                  <span style="font-weight: 800; font-size: 24px; color: #f43f5e;">₹${amountPaid}</span>
+                </div>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        const pdfBuffer = await generateInvoicePdfBuffer(newOrder);
+
+        await sendEmail(
+          user.email,
+          emailSubject,
+          `Your order for ₹${amountPaid} is confirmed.`,
+          emailHtml,
+          [
+            {
+              filename: `invoice-${newOrder._id}.pdf`,
+              content: pdfBuffer,
+              contentType: "application/pdf",
+            },
+          ]
+        );
+        console.log(`Background: Email sent for Order ${shortOrderId}`);
+      } catch (bgError) {
+        console.error("Background Notification Error:", bgError);
+      }
+    })();
+
   } catch (err) {
     console.error("Verify Error:", err);
-    res.status(500).json({ success: false, message: "Server Error" });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: "Server Error" });
+    }
+  }
+};
+
+// @desc    3. Create Cash/Dine-in Order (In-House / Pay at Counter)
+exports.createCashOrder = async (req, res) => {
+  const { orderType, tableNumber, deliveryAddress, deliveryCoords } = req.body;
+  const io = req.io;
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const cartItems = user.cart;
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({ error: "Your cart is empty." });
+    }
+
+    // --- GST CALCULATION ---
+    const subTotal = cartItems.reduce((acc, item) => {
+      const priceValue = parsePrice(item.price);
+      return acc + priceValue * item.quantity;
+    }, 0);
+
+    const gstAmount = Math.round(subTotal * 0.05 * 100) / 100;
+    const totalWithGst = subTotal + gstAmount;
+
+    let paymentMethodString = "Cash";
+    if (orderType === 'Dine-in') {
+      paymentMethodString = "Pay at Counter (Cash)";
+    } else if (orderType === 'Delivery') {
+      paymentMethodString = "Cash on Delivery";
+    }
+
+    // Create Order
+    const newOrder = new Order({
+      user: user._id,
+      items: cartItems,
+      subTotal: subTotal,
+      gstAmount: gstAmount,
+      totalAmount: totalWithGst,
+      status: "Pending",
+      paymentMethod: paymentMethodString,
+      
+      orderType: orderType || 'Delivery', 
+      tableNumber: orderType === 'Dine-in' ? tableNumber : undefined,
+      deliveryAddress: orderType === 'Delivery' ? deliveryAddress : undefined,
+      deliveryCoords: orderType === 'Delivery' ? deliveryCoords : undefined,
+    });
+
+    await newOrder.save();
+
+    // Clear Cart
+    user.cart = [];
+    await user.save();
+    
+    res.json({ success: true, orderId: newOrder._id, message: "Order placed successfully!" });
+
+    // Background notifications
+    (async () => {
+        try {
+          const populatedOrder = await newOrder.populate("user", "name email mobile");
+          
+          if (io) io.to("admins").emit("newOrder", populatedOrder);
+  
+          const shortOrderId = newOrder._id.toString().slice(-6).toUpperCase();
+          const emailSubject = `Order Placed #${shortOrderId} (${paymentMethodString})`;
+          
+          const itemsHtml = cartItems
+            .map(
+              (item) => `
+            <tr>
+              <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; color: #374151;">${item.title}</td>
+              <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6b7280;">${item.quantity}</td>
+              <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151; font-weight: 600;">₹${item.price}</td>
+            </tr>`
+            )
+            .join("");
+  
+          const emailHtml = `
+            <!DOCTYPE html>
+            <html>
+            <body style="margin: 0; padding: 0; font-family: sans-serif; background-color: #ffffff;">
+              <div style="max-width: 600px; margin: 20px auto; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
+                <div style="background-color: #f43f5e; padding: 40px 20px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Order Received!</h1>
+                  <p style="color: #ffe4e6; margin: 10px 0 0 0;">${paymentMethodString}</p>
+                </div>
+                <div style="padding: 40px 30px;">
+                  <p style="font-size: 18px; color: #374151;">Hi <strong>${user.name}</strong>,</p>
+                  
+                  <div style="background-color: #f9fafb; padding: 25px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #f3f4f6;">
+                    <p style="margin: 0; color: #4b5563;"><strong>Order ID:</strong> #${shortOrderId}</p>
+                    <p style="margin: 5px 0 0 0; color: #4b5563;"><strong>Payment:</strong> ${paymentMethodString}</p>
+                  </div>
+  
+                  <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <thead>
+                      <tr>
+                        <th style="text-align: left; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">ITEM</th>
+                        <th style="text-align: center; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">QTY</th>
+                        <th style="text-align: right; color: #9ca3af; font-size: 12px; padding-bottom: 10px;">PRICE</th>
+                      </tr>
+                    </thead>
+                    <tbody>${itemsHtml}</tbody>
+                  </table>
+                  
+                  <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: right;">
+                    <p style="margin: 0; color: #6b7280;">Subtotal: ₹${subTotal}</p>
+                    <p style="margin: 5px 0; color: #6b7280;">GST (5%): ₹${gstAmount}</p>
+                    <span style="font-weight: 700; color: #374151; margin-right: 20px;">Total Amount</span>
+                    <span style="font-weight: 800; font-size: 24px; color: #f43f5e;">₹${totalWithGst}</span>
+                  </div>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+  
+          const pdfBuffer = await generateInvoicePdfBuffer(newOrder);
+  
+          await sendEmail(
+            user.email,
+            emailSubject,
+            `Your order #${shortOrderId} is placed successfully.`,
+            emailHtml,
+            [
+              {
+                filename: `invoice-${newOrder._id}.pdf`,
+                content: pdfBuffer,
+                contentType: "application/pdf",
+              },
+            ]
+          );
+          console.log(`Background: Email sent for Cash Order ${shortOrderId}`);
+        } catch (bgError) {
+          console.error("Background Notification Error (Cash):", bgError);
+        }
+    })();
+
+  } catch (err) {
+    console.error("Cash Order Error:", err);
+    res.status(500).json({ error: "Server Error" });
   }
 };

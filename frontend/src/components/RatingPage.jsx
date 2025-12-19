@@ -17,7 +17,6 @@ const itemVariants = {
 };
 
 const RatingPage = () => {
-  // State for Form
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [name, setName] = useState("");

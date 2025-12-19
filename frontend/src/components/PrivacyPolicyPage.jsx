@@ -1,4 +1,3 @@
-// src/components/PrivacyPolicyPage.jsx
 import React from "react";
 import PolicyLayout from "./PolicyLayout";
 import { motion } from "framer-motion";
@@ -13,7 +12,7 @@ const PrivacyPolicyPage = () => {
         className="space-y-6"
       >
         <p className="text-neutral-400">
-          **Last Updated: 12th December 2025**
+          <strong>Last Updated: 16th December 2025</strong>
         </p>
 
         <section>
@@ -42,6 +41,14 @@ const PrivacyPolicyPage = () => {
           <p>
             We do not sell, trade, or otherwise transfer to outside parties your personally identifiable information. This does not include trusted third parties who assist us in operating our website, conducting our business, or servicing you, so long as those parties agree to keep this information confidential (e.g., Delivery partners).
           </p>
+        </section>
+        
+        <section>
+            <h3 className="text-xl font-semibold mb-2 text-rose-400">5. Contact Us</h3>
+            <p>
+                If there are any questions regarding this privacy policy, you may contact us using the information below: <br/>
+                Email: <strong>nguria7@gmail.com</strong>
+            </p>
         </section>
       </motion.div>
     </PolicyLayout>

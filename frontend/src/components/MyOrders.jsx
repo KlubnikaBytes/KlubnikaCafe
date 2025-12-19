@@ -42,9 +42,6 @@ const MyOrders = () => {
     const handleStatusUpdate = (payload) => {
       console.log("🔔 orderStatusUpdate received in MyOrders:", payload);
 
-      // Support two possible shapes:
-      //  - updatedOrder
-      //  - { order: updatedOrder }
       const updatedOrder = payload?.order || payload;
 
       if (!updatedOrder || !updatedOrder._id) {
@@ -55,10 +52,8 @@ const MyOrders = () => {
       setOrders((prev) => {
         const idx = prev.findIndex((o) => o._id === updatedOrder._id);
         if (idx === -1) {
-          // If order does not exist in current list, append it (optional)
-          return [...prev, updatedOrder];
+          return [updatedOrder, ...prev];
         }
-        // Replace existing
         return prev.map((o) =>
           o._id === updatedOrder._id ? updatedOrder : o
         );
@@ -71,6 +66,31 @@ const MyOrders = () => {
       socket.off("orderStatusUpdate", handleStatusUpdate);
     };
   }, [socket]);
+
+  // 3. Cancel Handler
+  const handleCancelOrder = async (orderId) => {
+    try {
+      const res = await fetch(`${API_URL}/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ reason: "User requested cancellation" })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel");
+      
+      // We don't need to manually update state here because the 
+      // socket event will trigger handleStatusUpdate above.
+      alert("Order cancelled successfully. Refund initiated.");
+      
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    }
+  };
 
   if (loading) {
     return (
@@ -88,10 +108,16 @@ const MyOrders = () => {
       <div className="max-w-3xl mx-auto space-y-6">
         {orders.length === 0 ? (
           <p className="text-center text-gray-400 text-xl">
-            You haven&apos;t placed any orders yet.
+            You haven't placed any orders yet.
           </p>
         ) : (
-          orders.map((order) => <OrderCard key={order._id} order={order} />)
+          orders.map((order) => (
+            <OrderCard 
+                key={order._id} 
+                order={order} 
+                onCancelOrder={handleCancelOrder}
+            />
+          ))
         )}
       </div>
     </div>

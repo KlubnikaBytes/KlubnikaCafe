@@ -135,6 +135,15 @@ import sizzlingBrownie from "../assets/Menu/Desserts/Sizzling brownie.jpg";
 import gulabJamunWithIceCream from "../assets/Menu/Desserts/Gulab Jamun with ice cream.jpg";
 import freshFruitPunch from "../assets/Menu/Desserts/Fresh Fruit Punch.jpg";
 
+//Combos
+import cappuccinoSandwichBrownie from "../assets/Menu/Combos/Cappuccino + SandwichBurger + Brownie with Ice Cream.png";
+import chocoFrappeSandwichBrownie from "../assets/Menu/Combos/Choco Frappe + SandwichBurger + Brownie.png";
+import mintMojitoMomo from "../assets/Menu/Combos/Mint Mojito + Schezwan Pan Fried Chicken Momo.png";
+import cappuccinoRedSaucePasta from "../assets/Menu/Combos/Cappuccino + Red Sauce Pasta.png";
+import klubnikaCoffeeGarlicBread from "../assets/Menu/Combos/Klubnika Coffee + Garlic Bread.png";
+import cappuccinoCCDCookies from "../assets/Menu/Combos/Cappuccino + CCD Cookies.png";
+import chickenPizzaMintMojito from "../assets/Menu/Combos/Chicken Pizza + Mint Mojito.png";
+
 // --- Import Icons ---
 import { FaXTwitter, FaFacebook, FaInstagram } from "react-icons/fa6";
 
@@ -163,7 +172,7 @@ export const LINKS = [
   { text: "About", targetId: "about" },
   { text: "Mission", targetId: "mission" },
   { text: "Expertise", targetId: "expertise" },
-  { text: "Review", targetId: "review" },
+  { text: "Merchandise", targetId: "merchandise" },
   { text: "Contact", targetId: "contact" },
   { text: "Gallery", targetId: "" },
   { text: "Cart", targetId: "" },
@@ -901,43 +910,43 @@ export const DISHES = [
     name: "Combo",
     items: [
       {
-        image: nextImage(), // SKIPPED
+        image: cappuccinoSandwichBrownie, // SKIPPED
         title: "Cappuccino + Sandwich/Burger + Brownie with Ice Cream",
         description: genDesc(),
         price: "₹199",
       },
       {
-        image: nextImage(), // SKIPPED
+        image: chocoFrappeSandwichBrownie, // SKIPPED
         title: "Choco Frappe + Sandwich/Burger + Brownie",
         description: genDesc(),
         price: "₹179",
       },
       {
-        image: nextImage(), // SKIPPED
+        image: mintMojitoMomo, // SKIPPED
         title: "Mint Mojito + Schezwan Pan Fried Chicken Momo",
         description: genDesc(),
         price: "₹149",
       },
       {
-        image: nextImage(), // SKIPPED
+        image: cappuccinoRedSaucePasta, // SKIPPED
         title: "Cappuccino + Red Sauce Pasta",
         description: genDesc(),
         price: "₹169",
       },
       {
-        image: nextImage(), // SKIPPED
+        image: klubnikaCoffeeGarlicBread, // SKIPPED
         title: "Klubnika Coffee + Garlic Bread",
         description: genDesc(),
         price: "₹79",
       },
       {
-        image: nextImage(), // SKIPPED
+        image: cappuccinoCCDCookies, // SKIPPED
         title: "Cappuccino + CCD Cookies",
         description: genDesc(),
         price: "₹90",
       },
       {
-        image: nextImage(), // SKIPPED
+        image: chickenPizzaMintMojito, // SKIPPED
         title: "Chicken Pizza + Mint Mojito",
         description: genDesc(),
         price: "₹215",

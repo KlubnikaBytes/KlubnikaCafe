@@ -37,18 +37,18 @@ app.use((req, res, next) => {
 
 // --- Socket.io Connection Events ---
 io.on('connection', (socket) => {
-  console.log(`✅ Socket Connected on Backend: ${socket.id}`);
+  console.log(`✅ Socket Connected on Backend`);
 
   // Join Room Event (for specific user notifications if needed)
   socket.on('joinRoom', (userId) => {
     if (userId) {
       socket.join(userId);
-      console.log(`👤 Socket ${socket.id} joined room ${userId}`);
+      console.log(`👤 Socket joined room`);
     }
   });
   
   socket.on('disconnect', () => {
-    console.log(`❌ Socket Disconnected: ${socket.id}`);
+    console.log(`❌ Socket Disconnected`);
   });
 });
 

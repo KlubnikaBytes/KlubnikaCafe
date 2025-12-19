@@ -1,4 +1,3 @@
-// backend/src/models/Order.js
 const mongoose = require('mongoose');
 
 const cartItemSchema = new mongoose.Schema({
@@ -15,35 +14,65 @@ const orderSchema = new mongoose.Schema({
     required: true,
   },
   items: [cartItemSchema],
-  totalAmount: {
-    type: Number,
+  
+  // --- TAX & TOTAL FIELDS ---
+  subTotal: { 
+    type: Number, 
     required: true,
+    default: 0
   },
+  gstAmount: { 
+    type: Number, 
+    required: true, 
+    default: 0 
+  }, // Calculated as 5% of subTotal
+  totalAmount: { 
+    type: Number, 
+    required: true,
+  }, // The final amount (subTotal + gstAmount)
+
   status: {
     type: String,
     required: true,
     enum: ['Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled'],
     default: 'Pending',
   },
+  
+  // --- Order Type (Delivery vs Dine-in) ---
+  orderType: {
+    type: String,
+    enum: ['Delivery', 'Dine-in'],
+    default: 'Delivery'
+  },
+  
+  // --- Table Number (Only for Dine-in) ---
+  tableNumber: {
+    type: String,
+    required: false,
+  },
+
+  // --- Delivery Fields (Optional for Dine-in) ---
   deliveryAddress: {
     type: String,
-    required: true,
+    required: false, 
   },
   deliveryCoords: {
-    lat: { type: Number, required: true },
-    lng: { type: Number, required: true },
+    lat: { type: Number, required: false },
+    lng: { type: Number, required: false },
   },
+
+  // --- Payment Fields (Optional for Cash/Pay at Counter) ---
   paymentId: {
     type: String,
-    required: true,
+    required: false, 
   },
   razorpayOrderId: {
     type: String,
-    required: true,
+    required: false, 
   },
   paymentMethod: {
     type: String,
-    default: 'Unknown', 
+    default: 'Online',
   }
 }, { timestamps: true });
 

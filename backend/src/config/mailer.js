@@ -1,47 +1,45 @@
-// backend/src/config/mailer.js
 const nodemailer = require('nodemailer');
 
-// Configure the email transporter
+// Configure the email transporter for Hostinger
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false, // true for 465, false for other ports (like 587)
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+  host: process.env.EMAIL_HOST, // Now: smtp.hostinger.com
+  port: parseInt(process.env.EMAIL_PORT) || 465, // Recommended: 465 for SSL
+  secure: true, // Use TRUE for port 465, FALSE for port 587
+  auth: {
+    user: process.env.EMAIL_USER, // support@klubnikacafe.com
+    pass: process.env.EMAIL_PASS, // Your Hostinger Email password
+  },
+  // Add these for better reliability with custom domains
+  tls: {
+    rejectUnauthorized: false 
+  }
 });
 
 /**
- * Sends an email
- * @param {string} to - The recipient's email address
- * @param {string} subject - The subject of the email
- * @param {string} text - The plain text body of the email
- * @param {string} html - The HTML body of the email (optional)
- * @param {Array} attachments - Optional Nodemailer attachments array
- *   e.g. [{ filename: 'invoice.pdf', content: <Buffer>, contentType: 'application/pdf' }]
- */
+ * Sends an email
+ */
 const sendEmail = async (to, subject, text, html, attachments = []) => {
-  try {
-    const mailOptions = {
-      from: `"Klubnika Website" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-      html: html || text,
-    };
+  try {
+    const mailOptions = {
+      // IMPORTANT: The 'from' address MUST match EMAIL_USER for Hostinger
+      from: `"Klubnika Cafe" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      text,
+      html: html || text,
+    };
 
-    if (attachments && attachments.length > 0) {
-      mailOptions.attachments = attachments; // critical for PDF attachment
-    }
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`Email sent: ${info.messageId}`);
-    return info;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw new Error('Failed to send email');
-  }
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent via Hostinger: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error('❌ Hostinger SMTP Error:', error);
+    throw new Error('Failed to send email via Hostinger');
+  }
 };
 
 module.exports = { sendEmail };

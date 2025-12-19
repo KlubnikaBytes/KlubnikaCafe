@@ -1,5 +1,4 @@
-// frontend/src/components/Navbar.jsx
-
+// src/components/Navbar.jsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/Klubnika-removebg-preview.png";
@@ -11,7 +10,6 @@ import { useAuth } from "../context/AuthContext";
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,16 +17,6 @@ const Navbar = () => {
   const cartItemCount = getItemCount();
   const { user, logout } = useAuth();
   const userMenuRef = useRef(null);
-
-  // Detect scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-      setIsUserMenuOpen(false);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -40,56 +28,42 @@ const Navbar = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  
 
-  const smoothScroll = (targetID) => {
-    const targetElement = document.getElementById(targetID);
-    if (!targetElement) return;
-    const navbarOffset = 80;
-    const elementPosition = targetElement.getBoundingClientRect().top + window.scrollY;
-    const offsetPosition = elementPosition - navbarOffset;
-    let start = window.scrollY;
-    let distance = offsetPosition - start;
-    let startTime = null;
-    const duration = 1000;
-    const easingFunction = (t) => t * (2 - t);
-
-    function scrollAnimation(currentTime) {
-      if (startTime === null) startTime = currentTime;
-      let timeElapsed = currentTime - startTime;
-      let progress = Math.min(timeElapsed / duration, 1);
-      let easeProgress = easingFunction(progress);
-      window.scrollTo(0, start + distance * easeProgress);
-      if (timeElapsed < duration) {
-        requestAnimationFrame(scrollAnimation);
-      } else {
-        setIsMobileMenuOpen(false);
-      }
-    }
-    requestAnimationFrame(scrollAnimation);
-  };
-
+  // --- NAVIGATION HANDLER ---
   const handleNavClick = (link) => {
+    setIsMobileMenuOpen(false); // Close mobile menu immediately
+
+    // 1. Special Pages (Cart, Contact, Gallery, Merchandise)
+    // ADDED: Merchandise to this list so it navigates to /merchandise
+    if (["Cart", "Contact", "Gallery", "Merchandise"].includes(link.text)) {
+      navigate(`/${link.text.toLowerCase()}`);
+      return;
+    }
+
+    // 2. The Menu/Dishes Page
     if (link.text === "Menu" || link.text === "Dishes") {
       navigate("/dishes");
-      setIsMobileMenuOpen(false);
-    } else if (link.text === "Cart") {
-      navigate("/cart");
-      setIsMobileMenuOpen(false);
-    } else if (link.text === "Contact") {
-      navigate("/contact");
-      setIsMobileMenuOpen(false);
-    } else if (link.text === "Gallery") {
-      navigate("/gallery");
-      setIsMobileMenuOpen(false);
-    } else {
-      if (location.pathname !== "/") {
-        navigate("/");
-        setTimeout(() => smoothScroll(link.targetId), 350);
-      } else {
-        smoothScroll(link.targetId);
+      return;
+    }
+
+    // 3. Scroll Sections (About, Mission, Expertise)
+    // Case A: We are already on the Home Page
+    if (location.pathname === "/") {
+      const element = document.getElementById(link.targetId);
+      if (element) {
+        const navbarOffset = 80;
+        const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+        const offsetPosition = elementPosition - navbarOffset;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth"
+        });
       }
-      setIsMobileMenuOpen(false);
+    } 
+    // Case B: We are on another page -> Navigate Home + Pass ID
+    else {
+      navigate("/", { state: { targetId: link.targetId } });
     }
   };
 
@@ -120,7 +94,7 @@ const Navbar = () => {
   );
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center py-3 transition-all duration-300">
+    <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center py-3">
       
       <div className={`
         relative flex w-[95%] max-w-7xl items-center justify-between 
@@ -132,6 +106,7 @@ const Navbar = () => {
         <button
           onClick={() => {
             navigate("/");
+            window.scrollTo({ top: 0, behavior: "smooth" });
             setIsMobileMenuOpen(false);
           }}
           className="focus:outline-none transform hover:scale-105 transition-transform duration-300 cursor-pointer"
@@ -149,8 +124,8 @@ const Navbar = () => {
             >
               {link.text === "Cart" ? (
                 <div className="flex items-center gap-1">
-                   <FaShoppingBag className="text-lg mb-1" />
-                   {renderCartBadge()}
+                    <FaShoppingBag className="text-lg mb-1" />
+                    {renderCartBadge()}
                 </div>
               ) : (
                 <>

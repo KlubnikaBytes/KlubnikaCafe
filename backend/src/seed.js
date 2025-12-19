@@ -739,36 +739,43 @@ const DISHES = [
     name: "Combo",
     items: [
       {
+        image: "assets/Menu/Combos/Cappuccino + SandwichBurger + Brownie with Ice Cream.png",
         title: "Cappuccino + Sandwich/Burger + Brownie with Ice Cream",
         description: "A delicious choice, freshly prepared for you.",
         price: "₹199",
       },
       {
+        image: "assets/Menu/Combos/Choco Frappe + SandwichBurger + Brownie.png",
         title: "Choco Frappe + Sandwich/Burger + Brownie",
         description: "A delicious choice, freshly prepared for you.",
         price: "₹179",
       },
       {
+        image: "assets/Menu/Combos/Mint Mojito + Schezwan Pan Fried Chicken Momo.png",
         title: "Mint Mojito + Schezwan Pan Fried Chicken Momo",
         description: "A delicious choice, freshly prepared for you.",
         price: "₹149",
       },
       {
+        image: "assets/Menu/Combos/Cappuccino + Red Sauce Pasta.png",
         title: "Cappuccino + Red Sauce Pasta",
         description: "A delicious choice, freshly prepared for you.",
         price: "₹169",
       },
       {
+        image: "assets/Menu/Combos/Klubnika Coffee + Garlic Bread.png",
         title: "Klubnika Coffee + Garlic Bread",
         description: "A delicious choice, freshly prepared for you.",
         price: "₹79",
       },
       {
+        image: "assets/Menu/Combos/Cappuccino + CCD Cookies.png",
         title: "Cappuccino + CCD Cookies",
         description: "A delicious choice, freshly prepared for you.",
         price: "₹90",
       },
       {
+        image: "assets/Menu/Combos/Chicken Pizza + Mint Mojito.png",
         title: "Chicken Pizza + Mint Mojito",
         description: "A delicious choice, freshly prepared for you.",
         price: "₹215",
