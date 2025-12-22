@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { REVIEW } from "../constants";
-import xaviour from "../assets/xaviour.jpeg";
+import xaviour from "../assets/Bishal_Nath.png";
 import customer1 from "../assets/customer1.jpeg";
 import customer2 from "../assets/customer2.jpeg";
 import customer3 from "../assets/customer3.jpeg";
