@@ -1003,7 +1003,7 @@ export const CUSINES = [
 // --- END OF MODIFIED SECTION ---
 
 export const REVIEW = {
-  name: "Xaviour Fernando",
+  name: "Bishal Nath",
   profession: "Food Critic",
   content:
     "“As a food critic, my expectations are always high — and Klubnika Cafe surpassed them effortlessly. A modest exterior hides a beautifully designed space inside, and the food? Simply exceptional. A delightful experience far beyond what I anticipated!”",
