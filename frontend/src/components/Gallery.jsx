@@ -27,7 +27,7 @@ import customer3 from "../assets/gallery/customer3.jpg";
 import customer4 from "../assets/gallery/customer4.jpg";
 import customer5 from "../assets/gallery/customer5.jpg";
 import customer6 from "../assets/gallery/customer6.jpg";
-import FishAndChips from "../assets/gallery/Fish & Chips.jpg";
+import FishAndChips from "../assets/gallery/fish-and-chips.jpg";
 import food1 from "../assets/gallery/food1.jpg";
 import pastry1 from "../assets/gallery/pastry1.jpg";
 
