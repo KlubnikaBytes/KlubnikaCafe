@@ -49,7 +49,6 @@ const Cart = () => {
   
   // DELIVERY CHARGE LOGIC: 
   // If Delivery AND Subtotal < 500 => Rs 20. Else 0.
-  // Dine-in is always 0.
   const deliveryCharge = (orderType === 'Delivery' && subtotal < 500) ? 20 : 0;
 
   const totalWithGst = subtotal + gstAmount + deliveryCharge;
@@ -90,16 +89,9 @@ const Cart = () => {
     if (addressDetails) {
       setAddress((prev) => ({
         ...prev,
-        // Auto-fill Street if available, keep old if not
         street: addressDetails.formatted_address || prev.street, 
-        
-        // Auto-fill City (Editable later)
         city: addressDetails.city || prev.city,
-        
-        // Auto-fill State (Read-Only)
         state: addressDetails.state || prev.state,
-        
-        // Auto-fill Pincode (Read-Only)
         pincode: addressDetails.pincode || "", 
       }));
     }
@@ -608,6 +600,11 @@ const Cart = () => {
                 </div>
                 <div className="h-4 w-4 rounded-full border-2 border-gray-300 group-hover:border-green-600"></div>
               </button>
+
+              {/* ✅ NEW RED NOTE ADDED HERE */}
+              <p className="text-xs text-red-500 text-center font-bold mt-2">
+                * Note: Delivery charge may change based on the distance.
+              </p>
             </div>
 
             <div className="mt-6 text-center">
