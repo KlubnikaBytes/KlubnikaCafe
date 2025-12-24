@@ -34,7 +34,7 @@ const parsePrice = (priceStr) => {
 // @desc    1. Create Razorpay Order ID (Includes 5% GST + Delivery)
 exports.createOrder = async (req, res) => {
   try {
-    const { orderType } = req.body; // Expecting 'Delivery' or 'Dine-in' from frontend
+    const { orderType } = req.body; // Expecting 'Delivery' or 'Dine-in'
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -159,7 +159,7 @@ exports.verifyPayment = async (req, res) => {
       items: validCartItems,
       subTotal: subTotal,
       gstAmount: gstAmount,
-      deliveryCharge: deliveryCharge, // SAVE THIS
+      deliveryCharge: deliveryCharge, // ✅ SAVING TO DB
       totalAmount: amountPaid,
       status: "Pending",
       
@@ -247,7 +247,11 @@ exports.verifyPayment = async (req, res) => {
                 <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: right;">
                   <p style="margin: 0; color: #6b7280;">Subtotal: ₹${subTotal}</p>
                   <p style="margin: 5px 0; color: #6b7280;">GST (5%): ₹${gstAmount}</p>
-                  <p style="margin: 5px 0; color: #6b7280;">Delivery: ₹${deliveryCharge}</p>
+                  
+                  <p style="margin: 5px 0; color: ${deliveryCharge > 0 ? '#374151' : 'green'}; font-weight: ${deliveryCharge === 0 ? 'bold' : 'normal'};">
+                    Delivery: ${deliveryCharge > 0 ? '₹' + deliveryCharge : 'FREE'}
+                  </p>
+
                   <span style="font-weight: 700; color: #374151; margin-right: 20px;">Total Amount Paid</span>
                   <span style="font-weight: 800; font-size: 24px; color: #f43f5e;">₹${amountPaid}</span>
                 </div>
@@ -329,7 +333,7 @@ exports.createCashOrder = async (req, res) => {
       items: cartItems,
       subTotal: subTotal,
       gstAmount: gstAmount,
-      deliveryCharge: deliveryCharge, // SAVE THIS
+      deliveryCharge: deliveryCharge, // ✅ SAVING TO DB
       totalAmount: totalWithGst,
       status: "Pending",
       paymentMethod: paymentMethodString,
@@ -400,7 +404,11 @@ exports.createCashOrder = async (req, res) => {
                   <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: right;">
                     <p style="margin: 0; color: #6b7280;">Subtotal: ₹${subTotal}</p>
                     <p style="margin: 5px 0; color: #6b7280;">GST (5%): ₹${gstAmount}</p>
-                    <p style="margin: 5px 0; color: #6b7280;">Delivery: ₹${deliveryCharge}</p>
+                    
+                    <p style="margin: 5px 0; color: ${deliveryCharge > 0 ? '#374151' : 'green'}; font-weight: ${deliveryCharge === 0 ? 'bold' : 'normal'};">
+                      Delivery: ${deliveryCharge > 0 ? '₹' + deliveryCharge : 'FREE'}
+                    </p>
+
                     <span style="font-weight: 700; color: #374151; margin-right: 20px;">Total Amount</span>
                     <span style="font-weight: 800; font-size: 24px; color: #f43f5e;">₹${totalWithGst}</span>
                   </div>
