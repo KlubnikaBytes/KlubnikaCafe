@@ -15,7 +15,7 @@ const instance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ✅ UPDATED PDF GENERATOR (Now includes Delivery Charge Row)
+// ✅ UPDATED PDF GENERATOR (Now includes Delivery Charge Row & Note)
 const generateInvoicePdfBuffer = (order) =>
   new Promise((resolve, reject) => {
     try {
@@ -82,11 +82,12 @@ const generateInvoicePdfBuffer = (order) =>
       doc.text("GST (5%):", 350, y);
       doc.text(`Rs. ${order.gstAmount || (order.totalAmount - (order.totalAmount / 1.05)).toFixed(2)}`, 400, y, { align: "right" });
 
-      // 3. ✅ DELIVERY CHARGE ROW (This was missing)
+      // 3. ✅ DELIVERY CHARGE ROW (Fixed)
       y += 20;
       doc.text("Delivery Charge:", 350, y);
-      const deliveryChargeText = order.deliveryCharge > 0 ? `Rs. ${order.deliveryCharge}` : "FREE";
-      doc.text(deliveryChargeText, 400, y, { align: "right" });
+      const delCharge = order.deliveryCharge || 0;
+      const delText = delCharge === 0 ? "FREE" : `Rs. ${delCharge}`;
+      doc.text(delText, 400, y, { align: "right" });
 
       // 4. Grand Total
       y += 25;
@@ -94,9 +95,15 @@ const generateInvoicePdfBuffer = (order) =>
       doc.text("Grand Total:", 300, y);
       doc.text(`Rs. ${order.totalAmount}`, 400, y, { align: "right" });
 
-      // Footer
+      // ✅ DISCLAIMER NOTE AT BOTTOM
+      doc.moveDown(2);
+      doc.fontSize(9).fillColor('red').font("Helvetica-Oblique");
+      doc.text("* Note: Delivery charge may change based on the distance.", 50, doc.y + 20, { align: "center" });
+      
+      doc.fillColor('black'); // Reset color
+      doc.moveDown(1);
       doc.fontSize(10).font("Helvetica");
-      doc.text("Thank you for dining with us!", 50, 700, { align: "center" });
+      doc.text("Thank you for dining with us!", 50, doc.y, { align: "center" });
 
       doc.end();
     } catch (err) {
