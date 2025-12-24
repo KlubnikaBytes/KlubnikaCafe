@@ -45,6 +45,7 @@ const AdminOrderDashboard = () => {
     const handleStatusUpdate = (payload) => {
       const updatedOrder = payload?.order || payload;
       if (!updatedOrder?._id) return;
+      
       setOrders((prev) =>
         prev.map((o) => (o._id === updatedOrder._id ? updatedOrder : o))
       );
@@ -70,9 +71,16 @@ const AdminOrderDashboard = () => {
         },
         body: JSON.stringify({ status: newStatus }),
       });
+
       if (!res.ok) throw new Error("Failed to update status");
       
-      // Optimistic update handled by socket, but safe to do here too if needed
+      const updatedOrder = await res.json(); 
+
+      // Immediate UI Update
+      setOrders((prev) =>
+        prev.map((o) => (o._id === orderId ? updatedOrder : o))
+      );
+      
     } catch (err) {
       console.error(err);
       alert("Failed to update status");
@@ -81,7 +89,7 @@ const AdminOrderDashboard = () => {
 
   // 4. Cancel/Reject Function
   const handleCancelOrder = async (orderId, paymentMethodStr) => {
-    const reason = prompt("Enter rejection reason (will be sent to customer):", "Unfortunately we cannot fulfill this order.");
+    const reason = prompt("Enter rejection reason:", "Unfortunately we cannot fulfill this order.");
     if (!reason) return; 
 
     try {
@@ -98,8 +106,15 @@ const AdminOrderDashboard = () => {
             const data = await res.json();
             throw new Error(data.error || "Failed to cancel");
         }
+
+        const responseData = await res.json();
+        const cancelledOrder = responseData.order || responseData; 
+
+        // Immediate UI Update
+        setOrders((prev) =>
+            prev.map((o) => (o._id === orderId ? cancelledOrder : o))
+        );
         
-        // Alert based on payment string check
         if (paymentMethodStr && (paymentMethodStr.includes("Cash") || paymentMethodStr.includes("Counter"))) {
              alert("Order Cancelled. ⚠️ No refund needed (Unpaid Order).");
         } else {
@@ -140,15 +155,11 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
   const { status } = order;
   const isDineIn = order.orderType === 'Dine-in';
   
-  // --- PAYMENT METHOD LOGIC ---
   const paymentMethod = order.paymentMethod || "Unknown";
   
-  // Check explicit strings set in backend
   const isCOD = paymentMethod.includes("Cash on Delivery");
   const isPayAtCounter = paymentMethod.includes("Pay at Counter");
-  const isOnline = !isCOD && !isPayAtCounter; // Assuming anything else is online
 
-  // --- UI BADGE SETTINGS ---
   let badgeColor = "bg-green-600 text-white border-transparent";
   let badgeText = "💳 ONLINE PAID";
 
@@ -160,7 +171,6 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
       badgeText = "🏦 PAY AT COUNTER";
   }
 
-  // Copy Address Logic
   const [copied, setCopied] = useState(false);
   const handleCopyAddress = () => {
     if (order.deliveryAddress) {
@@ -170,13 +180,22 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
     }
   };
 
+  // ✅ HELPER: Safely parse price (handles Strings, "Rs.", and Numbers)
+  const parseItemPrice = (priceVal) => {
+    if (!priceVal) return 0;
+    if (typeof priceVal === 'number') return priceVal;
+    // Remove anything that isn't a digit or a dot
+    const cleanString = priceVal.toString().replace(/[^0-9.]/g, '');
+    return parseFloat(cleanString) || 0;
+  };
+
   return (
     <div className={`rounded-lg shadow-lg p-5 flex flex-col animate-fadeIn border transition-colors ${isDineIn ? 'bg-gray-800 border-purple-500 hover:border-purple-400' : 'bg-gray-800 border-gray-700 hover:border-rose-500'}`}>
       
-      {/* --- HEADER --- */}
+      {/* HEADER */}
       <div className="border-b border-gray-700 pb-3 mb-3 flex justify-between items-start">
         <div>
-            <h3 className="text-xl font-bold text-white">#{order._id.slice(-6)}</h3>
+            <h3 className="text-xl font-bold text-white">#{order._id.slice(-6).toUpperCase()}</h3>
             <p className="text-sm text-gray-400">{order.user?.name || "Customer"}</p>
             <p className="text-sm text-gray-400">{order.user?.mobile || "No mobile"}</p>
         </div>
@@ -184,23 +203,20 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
             <span className={`text-xs font-bold px-2 py-1 rounded ${isDineIn ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white'}`}>
                 {isDineIn ? 'DINE-IN' : 'DELIVERY'}
             </span>
-            {/* DYNAMIC PAYMENT BADGE */}
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${badgeColor}`}>
                 {badgeText}
             </span>
         </div>
       </div>
 
-      {/* --- LOCATION / TABLE DISPLAY --- */}
+      {/* LOCATION */}
       <div className="mb-4 bg-gray-900 p-3 rounded-md relative group text-center">
         {isDineIn ? (
-            // DINE-IN VIEW
             <>
                 <h4 className="text-purple-400 text-xs uppercase font-bold tracking-wider mb-1">Table Number</h4>
                 <p className="text-4xl font-extrabold text-white">{order.tableNumber}</p>
             </>
         ) : (
-            // DELIVERY VIEW
             <>
                 <div className="flex justify-between items-center mb-1">
                     <h4 className="font-semibold text-primary text-xs uppercase tracking-wider">Delivery Address</h4>
@@ -216,9 +232,9 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
                     {order.deliveryAddress || "No address provided"}
                 </p>
 
-                {(order.googleMapsLink || order.location) && (
+                {(order.googleMapsLink || order.location || order.deliveryCoords) && (
                     <a 
-                        href={order.googleMapsLink || `http://maps.google.com/maps?q=${order.location?.lat},${order.location?.lng}`}
+                        href={order.googleMapsLink || `https://www.google.com/maps/search/?api=1&query=${order.deliveryCoords?.lat},${order.deliveryCoords?.lng}`}
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded transition-colors"
@@ -230,46 +246,52 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
         )}
       </div>
 
-      {/* --- ITEMS --- */}
+      {/* ITEMS */}
       <div className="mb-4 flex-grow">
         <h4 className="font-semibold text-primary mb-1">Items:</h4>
         <div className="max-h-32 overflow-y-auto pr-1">
             <ul className="list-disc list-inside text-gray-300 text-sm">
-            {order.items.map((item, i) => (
-                <li key={i} className="flex justify-between">
-                   <span>{item.quantity} x {item.title}</span>
-                   <span className="text-gray-500 text-xs">₹{item.price * item.quantity}</span>
-                </li>
-            ))}
+            {order.items.map((item, i) => {
+                // ✅ FIX: Use the robust helper function
+                const cleanPrice = parseItemPrice(item.price);
+                const qty = Number(item.quantity) || 1;
+                
+                return (
+                    <li key={i} className="flex justify-between">
+                       <span>{qty} x {item.title}</span>
+                       <span className="text-gray-500 text-xs">₹{(cleanPrice * qty).toFixed(2)}</span>
+                    </li>
+                );
+            })}
             </ul>
         </div>
       </div>
 
-      {/* --- ACTION BUTTONS --- */}
+      {/* ACTION BUTTONS */}
       <div className="mt-auto space-y-2 pt-3 border-t border-gray-700">
         <div className="flex justify-between items-center mb-2">
             <span className="text-gray-400 text-xs">Total: <b className="text-white text-base">₹{order.totalAmount}</b></span>
-            <span className={`font-bold ${status === 'Pending' ? 'text-yellow-400' : 'text-green-400'}`}>{status}</span>
+            <span className={`font-bold uppercase ${status === 'Pending' ? 'text-yellow-400' : 'text-green-400'}`}>{status}</span>
         </div>
 
         {status === "Pending" && (
           <div className="flex gap-2">
-              <button onClick={() => onUpdateStatus(order._id, "Confirmed")} className="flex-1 py-2 bg-blue-600 rounded-lg font-semibold hover:bg-blue-700 text-sm shadow-lg">Confirm</button>
-              <button onClick={() => onCancelOrder(order._id, order.paymentMethod)} className="flex-1 py-2 bg-red-600 rounded-lg font-semibold hover:bg-red-700 text-sm shadow-lg">Reject</button>
+              <button onClick={() => onUpdateStatus(order._id, "Confirmed")} className="flex-1 py-2 bg-blue-600 rounded-lg font-semibold hover:bg-blue-700 text-sm shadow-lg transition-transform active:scale-95">Confirm</button>
+              <button onClick={() => onCancelOrder(order._id, order.paymentMethod)} className="flex-1 py-2 bg-red-600 rounded-lg font-semibold hover:bg-red-700 text-sm shadow-lg transition-transform active:scale-95">Reject</button>
           </div>
         )}
         
         {status === "Confirmed" && (
           <div className="space-y-2">
-            <button onClick={() => onUpdateStatus(order._id, "Preparing")} className="w-full py-2 bg-orange-600 rounded-lg font-semibold hover:bg-orange-700 text-sm shadow-lg">Start Preparing</button>
-            <button onClick={() => onCancelOrder(order._id, order.paymentMethod)} className="w-full py-1 text-red-500 border border-red-500 rounded hover:bg-red-500 hover:text-white text-xs">Emergency Cancel</button>
+            <button onClick={() => onUpdateStatus(order._id, "Preparing")} className="w-full py-2 bg-orange-600 rounded-lg font-semibold hover:bg-orange-700 text-sm shadow-lg transition-transform active:scale-95">Start Preparing</button>
+            <button onClick={() => onCancelOrder(order._id, order.paymentMethod)} className="w-full py-1 text-red-500 border border-red-500 rounded hover:bg-red-500 hover:text-white text-xs transition-colors">Emergency Cancel</button>
           </div>
         )}
         
         {status === "Preparing" && (
            <button 
              onClick={() => onUpdateStatus(order._id, "Out for Delivery")} 
-             className="w-full py-2 bg-yellow-500 text-gray-900 rounded-lg font-semibold hover:bg-yellow-600 text-sm shadow-lg"
+             className="w-full py-2 bg-yellow-500 text-gray-900 rounded-lg font-semibold hover:bg-yellow-600 text-sm shadow-lg transition-transform active:scale-95"
            >
              {isDineIn ? "Mark Ready to Serve" : "Out for Delivery"}
            </button>
@@ -278,7 +300,7 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
         {status === "Out for Delivery" && (
            <button 
              onClick={() => onUpdateStatus(order._id, "Delivered")} 
-             className={`w-full py-2 rounded-lg font-semibold text-sm shadow-lg ${isCOD ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+             className={`w-full py-2 rounded-lg font-semibold text-sm shadow-lg transition-transform active:scale-95 ${isCOD ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
            >
              {isCOD 
                 ? "💰 Collect Cash & Delivered" 
