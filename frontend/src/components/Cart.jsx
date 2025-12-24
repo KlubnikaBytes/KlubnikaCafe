@@ -9,15 +9,7 @@ import Loader from "./Loader";
 const API_URL = import.meta.env.VITE_API_URL;
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
-const INDIAN_STATES = [
-  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar",
-  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa",
-  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka",
-  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya",
-  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim",
-  "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
-];
-
+// Helper to load Razorpay SDK
 const loadRazorpayScript = (src) => {
   return new Promise((resolve) => {
     const script = document.createElement("script");
@@ -48,15 +40,21 @@ const Cart = () => {
   const [orderType, setOrderType] = useState('Delivery'); 
   const [tableNumber, setTableNumber] = useState('');
 
-  // --- NEW: MODAL STATE ---
+  // --- MODAL STATE ---
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  // --- GST CALCULATION LOGIC ---
+  // --- TOTAL CALCULATION LOGIC ---
   const subtotal = getCartTotal();
   const gstAmount = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
-  const totalWithGst = subtotal + gstAmount;
+  
+  // DELIVERY CHARGE LOGIC: 
+  // If Delivery AND Subtotal < 500 => Rs 20. Else 0.
+  // Dine-in is always 0.
+  const deliveryCharge = (orderType === 'Delivery' && subtotal < 500) ? 20 : 0;
 
-  // Use a ref to prevent state updates on unmounted component
+  const totalWithGst = subtotal + gstAmount + deliveryCharge;
+
+  // Prevent state updates on unmount
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -69,11 +67,11 @@ const Cart = () => {
     }
   }, []);
 
-  // --- STATE FOR DELIVERY ---
+  // --- MAP & LOCATION STATE ---
   const [deliveryCoords, setDeliveryCoords] = useState(null);
   const [isWithinRange, setIsWithinRange] = useState(false);
 
-  // --- STRUCTURED ADDRESS STATE ---
+  // --- ADDRESS STATE ---
   const [address, setAddress] = useState({
     houseNo: "",
     street: "",
@@ -84,26 +82,30 @@ const Cart = () => {
     phone: user?.mobile || "",
   });
 
+  // --- HANDLE MAP SELECTION (Auto-fill & Lock Fields) ---
   const handleLocationSelect = (coords, inRange, addressDetails) => {
     setDeliveryCoords(coords);
     setIsWithinRange(inRange);
 
     if (addressDetails) {
-      const matchedState = INDIAN_STATES.find(s =>
-        addressDetails.state && s.toLowerCase() === addressDetails.state.toLowerCase()
-      ) || addressDetails.state || "";
-
       setAddress((prev) => ({
         ...prev,
-        houseNo: addressDetails.house_number || "",
-        street: addressDetails.road || addressDetails.suburb || "",
-        city: addressDetails.city || addressDetails.town || addressDetails.village || "",
-        state: matchedState,
-        pincode: addressDetails.postcode || "",
+        // Auto-fill Street if available, keep old if not
+        street: addressDetails.formatted_address || prev.street, 
+        
+        // Auto-fill City (Editable later)
+        city: addressDetails.city || prev.city,
+        
+        // Auto-fill State (Read-Only)
+        state: addressDetails.state || prev.state,
+        
+        // Auto-fill Pincode (Read-Only)
+        pincode: addressDetails.pincode || "", 
       }));
     }
   };
 
+  // Handle manual changes for editable fields
   const handleAddressChange = (e) => {
     setAddress({ ...address, [e.target.name]: e.target.value });
   };
@@ -118,33 +120,28 @@ const Cart = () => {
     address.pincode.trim() !== "" &&
     address.phone.trim() !== "";
 
-  const canCheckout = isAuthenticated && !hasSoldOutItem && (
-    orderType === 'Dine-in'
-      ? tableNumber.trim() !== "" 
-      : isWithinRange && isAddressComplete 
-  );
-
-  // --- 1. HANDLE INITIAL CLICK ---
+  // --- CHECKOUT FLOW ---
   const handleCheckout = async () => {
     if (!isAuthenticated) return navigate("/auth");
     if (hasSoldOutItem) return alert("Please remove sold-out items.");
 
     // Validate Input
     if (orderType === 'Dine-in' && !tableNumber) return alert("Please enter your Table Number.");
+    
     if (orderType === 'Delivery') {
       if (!isWithinRange) return alert("Your location is outside our delivery range.");
       if (!isAddressComplete) return alert("Please fill in all required address fields.");
       
-      // IF DELIVERY: SHOW MODAL TO CHOOSE PAYMENT
+      // Show Payment Modal for Delivery
       setShowPaymentModal(true);
       return; 
     }
 
-    // IF DINE-IN: PROCESS DIRECTLY (Pay at Counter)
+    // Process Dine-in Directly
     processDineInOrder();
   };
 
-  // --- 2. LOGIC FOR DINE-IN ---
+  // --- DINE-IN LOGIC ---
   const processDineInOrder = async () => {
     setLoadingText("Placing Order...");
     setLoading(true);
@@ -161,7 +158,7 @@ const Cart = () => {
             orderType: 'Dine-in',
             tableNumber: tableNumber,
             cartItems: cartItems, 
-            amount: totalWithGst // Pass Total with GST
+            amount: totalWithGst
           }),
         });
 
@@ -182,7 +179,7 @@ const Cart = () => {
     }
   };
 
-  // --- 3. LOGIC FOR CASH ON DELIVERY (Called from Modal) ---
+  // --- COD LOGIC ---
   const handleCODPayment = async () => {
     setShowPaymentModal(false);
     setLoadingText("Placing Order...");
@@ -190,7 +187,6 @@ const Cart = () => {
 
     const currentToken = localStorage.getItem('klubnikaToken');
     
-    // Format Address
     const formattedAddress = `
         ${address.houseNo}, ${address.street}
         ${address.landmark ? "Landmark: " + address.landmark : ""}
@@ -211,7 +207,7 @@ const Cart = () => {
                 deliveryCoords: deliveryCoords,
                 paymentMethod: 'Cash on Delivery',
                 cartItems: cartItems,
-                amount: totalWithGst // Pass Total with GST
+                amount: totalWithGst
             }),
         });
 
@@ -232,7 +228,7 @@ const Cart = () => {
     }
   };
 
-  // --- 4. LOGIC FOR ONLINE PAYMENT (Razorpay) (Called from Modal) ---
+  // --- ONLINE PAYMENT LOGIC (Razorpay) ---
   const handleOnlinePayment = async () => {
     setShowPaymentModal(false);
     setLoadingText("Initializing Payment Gateway...");
@@ -251,14 +247,17 @@ const Cart = () => {
         const res = await loadRazorpayScript("https://checkout.razorpay.com/v1/checkout.js");
         if (!res) throw new Error("Failed to load payment gateway.");
         
-        // 1. Create Razorpay Order
+        // 1. Create Order (Backend calculates Delivery Charge)
         const orderRes = await fetch(`${API_URL}/payment/create-order`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${currentToken}`,
           },
-          body: JSON.stringify({ amount: totalWithGst }), // Pass Total with GST
+          body: JSON.stringify({ 
+              amount: totalWithGst,
+              orderType: 'Delivery' // Important to send this so backend knows to add charge
+          }),
         });
 
         if (!orderRes.ok) {
@@ -286,10 +285,6 @@ const Cart = () => {
               const freshToken = localStorage.getItem('klubnikaToken'); 
               if (!freshToken) throw new Error("Authentication lost.");
 
-              const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Verification Timed Out")), 15000)
-              );
-
               const verifyPromise = fetch(`${API_URL}/payment/verify-payment`, {
                 method: "POST",
                 headers: {
@@ -301,13 +296,13 @@ const Cart = () => {
                   cartItems: cartItems, 
                   deliveryAddress: formattedAddress,
                   deliveryCoords: deliveryCoords,
-                  totalAmount: totalWithGst, // Pass Total with GST
+                  totalAmount: totalWithGst, 
                   orderType: 'Delivery',
                   paymentMethod: 'Online'
                 }),
               });
 
-              const verifyRes = await Promise.race([verifyPromise, timeoutPromise]);
+              const verifyRes = await verifyPromise;
               const verifyData = await verifyRes.json();
 
               if (verifyData.success) {
@@ -319,13 +314,7 @@ const Cart = () => {
 
             } catch (err) {
               console.error(err);
-              if (err.message === "Verification Timed Out") {
-                 clearCart();
-                 navigate("/my-orders");
-                 alert("Order placed! You will receive confirmation shortly.");
-              } else {
-                 alert("Payment verification error: " + err.message);
-              }
+              alert("Payment verification error: " + err.message);
             } finally {
               if (isMounted.current) setLoading(false);
             }
@@ -457,35 +446,62 @@ const Cart = () => {
                     
                     <h3 className="text-lg font-semibold text-white pt-4 border-t border-gray-700 mt-4">Address Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
+                        {/* House No */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">House No / Flat No *</label>
                             <input type="text" name="houseNo" value={address.houseNo} onChange={handleAddressChange} className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none" placeholder="e.g. 42-A" />
                         </div>
+
+                        {/* Street */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">Street / Area *</label>
                             <input type="text" name="street" value={address.street} onChange={handleAddressChange} className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none" placeholder="e.g. Main Road" />
                         </div>
+
+                        {/* Landmark */}
                         <div className="md:col-span-2">
                             <label className="block text-sm text-gray-400 mb-1">Landmark (Optional)</label>
                             <input type="text" name="landmark" value={address.landmark} onChange={handleAddressChange} className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none" placeholder="e.g. Near Park" />
                         </div>
+
+                        {/* City (Editable) */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">City *</label>
-                            <input type="text" name="city" value={address.city} onChange={handleAddressChange} className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none" />
+                            <input 
+                                type="text" 
+                                name="city" 
+                                value={address.city} 
+                                onChange={handleAddressChange} 
+                                className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none" 
+                            />
                         </div>
+
+                        {/* Pincode (Read-Only) */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">Pincode *</label>
-                            <input type="text" name="pincode" value={address.pincode} onChange={handleAddressChange} className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none" />
+                            <input 
+                                type="text" 
+                                name="pincode" 
+                                value={address.pincode} 
+                                readOnly={true} 
+                                className="w-full p-3 rounded bg-gray-900 text-gray-400 border border-gray-700 cursor-not-allowed focus:outline-none" 
+                            />
                         </div>
+
+                        {/* State (Read-Only) */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">State *</label>
-                            <select name="state" value={address.state} onChange={handleAddressChange} className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none appearance-none cursor-pointer">
-                                <option value="">Select State</option>
-                                {INDIAN_STATES.map((state) => (
-                                    <option key={state} value={state}>{state}</option>
-                                ))}
-                            </select>
+                            <label className="block text-sm text-gray-400 mb-1">State</label>
+                            <input 
+                                type="text"
+                                name="state"
+                                value={address.state}
+                                readOnly={true}
+                                className="w-full p-3 rounded bg-gray-900 text-gray-400 border border-gray-700 cursor-not-allowed focus:outline-none"
+                            />
                         </div>
+
+                        {/* Phone */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">Contact Phone *</label>
                             <input type="text" name="phone" value={address.phone} onChange={handleAddressChange} className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-primary focus:outline-none" />
@@ -502,11 +518,22 @@ const Cart = () => {
               <span>Subtotal</span>
               <span className="font-semibold">₹{subtotal.toFixed(2)}</span>
             </div>
-            {/* Added GST Breakdown */}
             <div className="flex justify-between items-center text-lg text-gray-400 mb-2">
               <span>GST (5%)</span>
               <span className="font-semibold">₹{gstAmount.toFixed(2)}</span>
             </div>
+            
+            {/* DELIVERY CHARGE ROW */}
+            <div className="flex justify-between items-center text-lg text-gray-400 mb-2">
+              <span>Delivery Charge</span>
+              <span className={`font-semibold ${deliveryCharge === 0 ? 'text-green-400' : ''}`}>
+                 {deliveryCharge === 0 ? "FREE" : `₹${deliveryCharge.toFixed(2)}`}
+              </span>
+            </div>
+            {orderType === 'Delivery' && deliveryCharge === 0 && subtotal > 0 && (
+                <p className="text-xs text-green-500 text-right -mt-2 mb-2">Free delivery applied (Orders above ₹500)</p>
+            )}
+
             <div className="flex justify-between items-center text-lg text-gray-300 mb-6">
               <span>Order Type</span>
               <span className="font-semibold text-primary">{orderType}</span>
@@ -531,7 +558,7 @@ const Cart = () => {
 
             <button
               onClick={handleCheckout}
-              disabled={!canCheckout}
+              disabled={!isAuthenticated || hasSoldOutItem || (orderType === 'Dine-in' ? !tableNumber : (!isWithinRange || !isAddressComplete))}
               className={`mt-8 w-full py-4 rounded-full font-semibold text-lg shadow-lg hover:scale-[1.02] transition-all disabled:bg-gray-600 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer ${orderType === 'Dine-in' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-primary hover:bg-rose-600 text-white'}`}
             >
               {isAuthenticated 
@@ -550,7 +577,7 @@ const Cart = () => {
             
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-extrabold text-gray-800">Choose Payment</h2>
-              <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+              <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
             </div>
 
             <div className="space-y-4">
