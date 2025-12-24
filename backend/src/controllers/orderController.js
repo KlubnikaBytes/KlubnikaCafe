@@ -15,7 +15,7 @@ const instance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// Helper: generate invoice PDF into a Buffer
+// ✅ UPDATED PDF GENERATOR (Now includes Delivery Charge Row)
 const generateInvoicePdfBuffer = (order) =>
   new Promise((resolve, reject) => {
     try {
@@ -73,22 +73,22 @@ const generateInvoicePdfBuffer = (order) =>
       y += 30;
       doc.fontSize(11).font("Helvetica");
       
-      // Subtotal
+      // 1. Subtotal
       doc.text("Subtotal:", 350, y);
       doc.text(`Rs. ${order.subTotal || (order.totalAmount / 1.05).toFixed(2)}`, 400, y, { align: "right" });
       
-      // GST
+      // 2. GST
       y += 20;
       doc.text("GST (5%):", 350, y);
       doc.text(`Rs. ${order.gstAmount || (order.totalAmount - (order.totalAmount / 1.05)).toFixed(2)}`, 400, y, { align: "right" });
 
-      // Delivery Charge (Added Row)
+      // 3. ✅ DELIVERY CHARGE ROW (This was missing)
       y += 20;
       doc.text("Delivery Charge:", 350, y);
-      const deliveryChargeText = order.deliveryCharge ? `Rs. ${order.deliveryCharge}` : "Rs. 0";
+      const deliveryChargeText = order.deliveryCharge > 0 ? `Rs. ${order.deliveryCharge}` : "FREE";
       doc.text(deliveryChargeText, 400, y, { align: "right" });
 
-      // Grand Total
+      // 4. Grand Total
       y += 25;
       doc.fontSize(14).font("Helvetica-Bold");
       doc.text("Grand Total:", 300, y);
