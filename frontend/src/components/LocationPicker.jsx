@@ -14,7 +14,7 @@ const CAFE_LOCATION = {
   lng: 87.5219511,
 };
 
-const MAX_DISTANCE_KM = 10;
+const MAX_DISTANCE_KM = 15;
 
 // Dark Theme Style
 const MAP_STYLE = [
