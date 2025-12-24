@@ -15,7 +15,7 @@ const orderSchema = new mongoose.Schema({
   },
   items: [cartItemSchema],
   
-  // --- TAX & TOTAL FIELDS ---
+  // --- TAX, DELIVERY & TOTAL FIELDS ---
   subTotal: { 
     type: Number, 
     required: true,
@@ -25,11 +25,18 @@ const orderSchema = new mongoose.Schema({
     type: Number, 
     required: true, 
     default: 0 
-  }, // Calculated as 5% of subTotal
+  }, 
+  
+  // ✅ ADDED THIS FIELD: Crucial for Strict Mode on Server
+  deliveryCharge: { 
+    type: Number, 
+    default: 0 
+  }, 
+
   totalAmount: { 
     type: Number, 
     required: true,
-  }, // The final amount (subTotal + gstAmount)
+  }, 
 
   status: {
     type: String,
@@ -61,7 +68,7 @@ const orderSchema = new mongoose.Schema({
     lng: { type: Number, required: false },
   },
 
-  // --- Payment Fields (Optional for Cash/Pay at Counter) ---
+  // --- Payment Fields ---
   paymentId: {
     type: String,
     required: false, 
