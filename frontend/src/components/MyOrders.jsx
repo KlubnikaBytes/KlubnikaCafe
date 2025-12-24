@@ -1,5 +1,6 @@
 // src/components/MyOrders.jsx
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // Added Link import
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import OrderCard from "./OrderCard";
@@ -15,6 +16,7 @@ const MyOrders = () => {
   // 1. Initial Fetch
   useEffect(() => {
     const fetchOrders = async () => {
+      // If no token, stop loading immediately (UI will handle the rest)
       if (!token) {
         setLoading(false);
         return;
@@ -82,8 +84,6 @@ const MyOrders = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to cancel");
       
-      // We don't need to manually update state here because the 
-      // socket event will trigger handleStatusUpdate above.
       alert("Order cancelled successfully. Refund initiated.");
       
     } catch (err) {
@@ -96,6 +96,27 @@ const MyOrders = () => {
     return (
       <div className="min-h-screen pt-40 text-center text-white">
         Loading...
+      </div>
+    );
+  }
+
+  // --- NEW: CHECK IF LOGGED IN ---
+  if (!token) {
+    return (
+      <div className="container mx-auto min-h-screen pt-32 pb-20 px-4 flex flex-col items-center justify-center">
+        <div className="bg-gray-800 p-8 rounded-2xl shadow-xl text-center max-w-md w-full border border-gray-700">
+            <div className="text-5xl mb-4">🔐</div>
+            <h2 className="text-3xl font-bold text-white mb-4">Login Required</h2>
+            <p className="text-gray-400 mb-8">
+                Please log in to access your order history and track your deliveries.
+            </p>
+            <Link 
+                to="/auth" 
+                className="inline-block px-8 py-3 bg-primary hover:bg-rose-600 text-white rounded-full font-bold shadow-lg transition-all transform hover:scale-105"
+            >
+                Login Now
+            </Link>
+        </div>
       </div>
     );
   }
