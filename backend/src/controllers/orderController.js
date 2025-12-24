@@ -1,3 +1,5 @@
+// backend/src/controllers/orderController.js
+
 const Order = require("../models/Order.js");
 const PDFDocument = require("pdfkit");
 const Razorpay = require("razorpay");
@@ -32,7 +34,7 @@ const generateInvoicePdfBuffer = (order) =>
       doc.moveDown();
 
       doc.fontSize(10).text("Klubnika Restaurant", { align: "right" });
-      doc.text("123 Food Street, Kolkata", { align: "right" });
+      doc.text("Gobindapur, Chandrakona, West Bengal 721201", { align: "right" });
       doc.moveDown();
 
       doc.fontSize(12).text(`Order ID: ${order._id}`);
@@ -79,6 +81,12 @@ const generateInvoicePdfBuffer = (order) =>
       y += 20;
       doc.text("GST (5%):", 350, y);
       doc.text(`Rs. ${order.gstAmount || (order.totalAmount - (order.totalAmount / 1.05)).toFixed(2)}`, 400, y, { align: "right" });
+
+      // Delivery Charge (Added Row)
+      y += 20;
+      doc.text("Delivery Charge:", 350, y);
+      const deliveryChargeText = order.deliveryCharge ? `Rs. ${order.deliveryCharge}` : "Rs. 0";
+      doc.text(deliveryChargeText, 400, y, { align: "right" });
 
       // Grand Total
       y += 25;
