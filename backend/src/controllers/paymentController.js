@@ -159,7 +159,7 @@ exports.verifyPayment = async (req, res) => {
       items: validCartItems,
       subTotal: subTotal,
       gstAmount: gstAmount,
-      deliveryCharge: deliveryCharge, // ✅ SAVING TO DB
+      deliveryCharge: deliveryCharge, // SAVE THIS
       totalAmount: amountPaid,
       status: "Pending",
       
@@ -209,9 +209,9 @@ exports.verifyPayment = async (req, res) => {
           .map(
             (item) => `
           <tr>
-            <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; color: #374151;">${item.title}</td>
-            <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6b7280;">${item.quantity}</td>
-            <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151; font-weight: 600;">₹${item.price}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.title}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price}</td>
           </tr>`
           )
           .join("");
@@ -252,8 +252,11 @@ exports.verifyPayment = async (req, res) => {
                     Delivery: ${deliveryCharge > 0 ? '₹' + deliveryCharge : 'FREE'}
                   </p>
 
-                  <span style="font-weight: 700; color: #374151; margin-right: 20px;">Total Amount Paid</span>
-                  <span style="font-weight: 800; font-size: 24px; color: #f43f5e;">₹${amountPaid}</span>
+                  <h2 style="color: #f43f5e; margin-bottom: 10px;">Total: ₹${amountPaid}</h2>
+                  
+                  <p style="font-size: 11px; color: #ef4444; margin-top: 15px; font-style: italic;">
+                     * Note: Delivery charge may change based on the distance.
+                  </p>
                 </div>
               </div>
             </div>
@@ -333,7 +336,7 @@ exports.createCashOrder = async (req, res) => {
       items: cartItems,
       subTotal: subTotal,
       gstAmount: gstAmount,
-      deliveryCharge: deliveryCharge, // ✅ SAVING TO DB
+      deliveryCharge: deliveryCharge, // SAVE THIS
       totalAmount: totalWithGst,
       status: "Pending",
       paymentMethod: paymentMethodString,
@@ -366,9 +369,9 @@ exports.createCashOrder = async (req, res) => {
             .map(
               (item) => `
             <tr>
-              <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; color: #374151;">${item.title}</td>
-              <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6b7280;">${item.quantity}</td>
-              <td style="padding: 15px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151; font-weight: 600;">₹${item.price}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #374151;">${item.title}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${item.price}</td>
             </tr>`
             )
             .join("");
@@ -404,13 +407,15 @@ exports.createCashOrder = async (req, res) => {
                   <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: right;">
                     <p style="margin: 0; color: #6b7280;">Subtotal: ₹${subTotal}</p>
                     <p style="margin: 5px 0; color: #6b7280;">GST (5%): ₹${gstAmount}</p>
-                    
                     <p style="margin: 5px 0; color: ${deliveryCharge > 0 ? '#374151' : 'green'}; font-weight: ${deliveryCharge === 0 ? 'bold' : 'normal'};">
                       Delivery: ${deliveryCharge > 0 ? '₹' + deliveryCharge : 'FREE'}
                     </p>
+                    
+                    <h2 style="color: #f43f5e; margin-bottom: 10px;">Total: ₹${totalWithGst}</h2>
 
-                    <span style="font-weight: 700; color: #374151; margin-right: 20px;">Total Amount</span>
-                    <span style="font-weight: 800; font-size: 24px; color: #f43f5e;">₹${totalWithGst}</span>
+                    <p style="font-size: 11px; color: #ef4444; margin-top: 15px; font-style: italic;">
+                       * Note: Delivery charge may change based on the distance.
+                    </p>
                   </div>
                 </div>
               </div>
