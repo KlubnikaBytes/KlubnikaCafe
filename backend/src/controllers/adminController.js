@@ -1,22 +1,20 @@
 // backend/src/controllers/adminController.js
 
 const jwt = require('jsonwebtoken');
-const Order = require('../models/Order'); // Import Order model
+const Order = require('../models/Order');
 
 // Sample hardcoded admin credentials
-const ADMIN_USERNAME = 'klubnika_cafeadmin';//klubnika_cafeadmin
-const ADMIN_PASSWORD = 'OverCoffee@757';//OverCoffee@757
+const ADMIN_USERNAME = 'klubnika_cafeadmin';
+const ADMIN_PASSWORD = 'OverCoffee@757';
 
 // --- 1. Admin Login ---
 exports.adminLogin = async (req, res) => {
   const { username, password } = req.body;
   try {
-    // Check hardcoded credentials
     if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
       return res.status(401).json({ error: 'Invalid admin credentials' });
     }
 
-    // Login Successful: Create token
     const token = jwt.sign(
       { id: 'admin_user', isAdmin: true },
       process.env.JWT_SECRET, 
@@ -36,8 +34,25 @@ exports.getInvoiceStats = async (req, res) => {
   try {
     const stats = await Order.aggregate([
       {
-        // Filter out cancelled orders
-        $match: { status: { $ne: 'cancelled' } } 
+        $match: {
+          $and: [
+            // 1. Exclude Cancelled Orders (Case insensitive check to be safe)
+            { status: { $ne: 'Cancelled' } }, 
+            { status: { $ne: 'cancelled' } },
+
+            // 2. LOGIC UPDATE: 
+            // If Payment is Cash/COD, only count if status is NOT 'Pending'.
+            // (i.e. Exclude if Payment contains "Cash" AND Status is "Pending")
+            {
+              $nor: [
+                {
+                  paymentMethod: { $regex: 'Cash', $options: 'i' }, // Matches "Cash on Delivery" or "Pay at Counter (Cash)"
+                  status: 'Pending'
+                }
+              ]
+            }
+          ]
+        }
       },
       {
         $group: {
@@ -46,13 +61,10 @@ exports.getInvoiceStats = async (req, res) => {
             month: { $month: "$createdAt" }
           },
           totalOrders: { $sum: 1 },
-          // FIX APPLIED HERE: Changed "$totalPrice" to "$totalAmount"
-          // This fixes the "0" revenue issue if your DB uses 'totalAmount'
           totalRevenue: { $sum: "$totalAmount" } 
         }
       },
       { 
-        // Sort by Year (descending) then Month (descending)
         $sort: { "_id.year": -1, "_id.month": -1 } 
       }
     ]);
@@ -73,15 +85,28 @@ exports.getMonthlyReport = async (req, res) => {
   }
 
   try {
-    // Calculate start and end date for the requested month
     const startDate = new Date(year, month - 1, 1); 
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
     const orders = await Order.find({
       createdAt: { $gte: startDate, $lte: endDate },
-      status: { $ne: 'cancelled' }
+      $and: [
+        // 1. Exclude Cancelled
+        { status: { $ne: 'Cancelled' } },
+        { status: { $ne: 'cancelled' } },
+        
+        // 2. Exclude Pending Cash Orders
+        {
+          $nor: [
+            {
+              paymentMethod: { $regex: 'Cash', $options: 'i' },
+              status: 'Pending'
+            }
+          ]
+        }
+      ]
     })
-    .populate('user', 'name email') // Get customer details
+    .populate('user', 'name email mobile') 
     .sort({ createdAt: -1 });
 
     res.json(orders);
