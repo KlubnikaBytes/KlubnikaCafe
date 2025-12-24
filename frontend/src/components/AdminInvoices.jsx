@@ -1,5 +1,3 @@
-// frontend/src/components/AdminInvoices.jsx
-
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -41,11 +39,46 @@ const AdminInvoices = () => {
       });
       const orders = await res.json();
 
-      // --- UPDATED EXCEL MAPPING WITH GST BREAKDOWN ---
+      // --- UPDATED EXCEL MAPPING WITH SMART DELIVERY CHARGE CALCULATION ---
       const excelData = orders.map(order => {
-        // Calculate fallbacks for older orders that don't have subTotal/gstAmount fields
-        const subTotalVal = order.subTotal || (order.totalAmount / 1.05);
-        const gstAmountVal = order.gstAmount || (order.totalAmount - subTotalVal);
+        // 1. Get Values (use DB value if exists)
+        let subTotalVal = order.subTotal;
+        let gstAmountVal = order.gstAmount;
+        let totalVal = order.totalAmount;
+        let deliveryChargeVal = order.deliveryCharge;
+
+        // 2. Fallback Logic for Older Orders (missing fields)
+        if (!subTotalVal) {
+             // If subtotal is missing, we try to detect if Delivery (20) was applied
+             // Logic: If (Total - 20) / 1.05 results in a clean number, it likely had delivery charge
+             // Or simpler: If order type is Delivery and Total suggests a small order
+             
+             // Base assumption: No delivery charge
+             subTotalVal = totalVal / 1.05;
+             
+             // Check if applying delivery charge makes sense (e.g. Total 77.75 -> Sub 55)
+             const subTotalWithDelivery = (totalVal - 20) / 1.05;
+             
+             // If SubtotalWithDelivery < 500, then Delivery Charge of 20 IS applicable.
+             if (order.orderType === 'Delivery' && subTotalWithDelivery < 500) {
+                 // Use the values assuming delivery charge exists
+                 subTotalVal = subTotalWithDelivery;
+                 deliveryChargeVal = 20; 
+             }
+        }
+
+        // 3. GST Fallback
+        if (!gstAmountVal) {
+             gstAmountVal = totalVal - subTotalVal - (deliveryChargeVal || 0);
+        }
+
+        // 4. Final Delivery Charge Calculation (The Fix for your Screenshot)
+        // If deliveryCharge is still undefined/null, calculate the gap
+        if (deliveryChargeVal === undefined || deliveryChargeVal === null) {
+             const gap = totalVal - subTotalVal - gstAmountVal;
+             // If gap is approx 20, set it to 20. If approx 0, set to 0.
+             deliveryChargeVal = Math.abs(gap - 20) < 1 ? 20 : (Math.abs(gap) < 1 ? 0 : gap);
+        }
 
         return {
           OrderID: order._id,
@@ -60,7 +93,8 @@ const AdminInvoices = () => {
           // Financial Breakdown
           Subtotal: Number(subTotalVal.toFixed(2)),
           GST_5_Percent: Number(gstAmountVal.toFixed(2)),
-          Total_Grand: Number(order.totalAmount.toFixed(2)),
+          Delivery_Charge: Number(deliveryChargeVal.toFixed(2)), // NOW CALCULATED CORRECTLY
+          Total_Grand: Number(totalVal.toFixed(2)),
           
           Status: order.status,
           PaymentMethod: order.paymentMethod
@@ -69,7 +103,7 @@ const AdminInvoices = () => {
 
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       
-      // Setting column widths for better readability in Excel
+      // Setting column widths
       const wscols = [
         { wch: 25 }, // OrderID
         { wch: 12 }, // Date
@@ -79,6 +113,7 @@ const AdminInvoices = () => {
         { wch: 40 }, // Items
         { wch: 10 }, // Subtotal
         { wch: 15 }, // GST
+        { wch: 15 }, // Delivery Charge
         { wch: 15 }, // Total
         { wch: 15 }, // Status
         { wch: 20 }, // PaymentMethod
