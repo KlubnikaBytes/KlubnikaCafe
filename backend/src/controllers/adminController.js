@@ -36,17 +36,15 @@ exports.getInvoiceStats = async (req, res) => {
       {
         $match: {
           $and: [
-            // 1. Exclude Cancelled Orders (Case insensitive check to be safe)
-            { status: { $ne: 'Cancelled' } }, 
-            { status: { $ne: 'cancelled' } },
+            // 1. STRICTLY Exclude Cancelled Orders (Case Insensitive Regex)
+            { status: { $not: /cancelled/i } }, 
 
-            // 2. LOGIC UPDATE: 
-            // If Payment is Cash/COD, only count if status is NOT 'Pending'.
+            // 2. Logic: If Payment is Cash/COD, only count if status is NOT 'Pending'.
             // (i.e. Exclude if Payment contains "Cash" AND Status is "Pending")
             {
               $nor: [
                 {
-                  paymentMethod: { $regex: 'Cash', $options: 'i' }, // Matches "Cash on Delivery" or "Pay at Counter (Cash)"
+                  paymentMethod: { $regex: 'Cash', $options: 'i' }, 
                   status: 'Pending'
                 }
               ]
@@ -91,9 +89,8 @@ exports.getMonthlyReport = async (req, res) => {
     const orders = await Order.find({
       createdAt: { $gte: startDate, $lte: endDate },
       $and: [
-        // 1. Exclude Cancelled
-        { status: { $ne: 'Cancelled' } },
-        { status: { $ne: 'cancelled' } },
+        // 1. STRICTLY Exclude Cancelled
+        { status: { $not: /cancelled/i } },
         
         // 2. Exclude Pending Cash Orders
         {
