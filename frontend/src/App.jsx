@@ -5,7 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // --- Context Providers ---
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
-import { SocketProvider } from "./context/SocketContext";
+import { SocketProvider } from "./context/SocketContext"; // ✅ Socket Provider Import
 import { LoadingProvider } from "./context/LoadingContext";
 
 // --- Core Layout Components ---
@@ -21,8 +21,8 @@ const Dishes = lazy(() => import("./components/Dishes"));
 const About = lazy(() => import("./components/About"));
 const Mission = lazy(() => import("./components/Mission"));
 const Expertise = lazy(() => import("./components/Expertise"));
-const Review = lazy(() => import("./components/Review")); // ✅ Review is imported back
-const Merchandise = lazy(() => import("./components/Merchandise")); // ✅ Added Merchandise
+const Review = lazy(() => import("./components/Review"));
+const Merchandise = lazy(() => import("./components/Merchandise"));
 const Cart = lazy(() => import("./components/Cart"));
 const Auth = lazy(() => import("./components/Auth"));
 const Contact = lazy(() => import("./components/ContactSection"));
@@ -30,14 +30,13 @@ const Gallery = lazy(() => import("./components/Gallery"));
 const MyOrders = lazy(() => import("./components/MyOrders"));
 const RatingPage = lazy(() => import("./components/RatingPage")); 
 
-// --- NEW LAZY IMPORTS FOR RAZORPAY COMPLIANCE ---
+// --- COMPLIANCE PAGES ---
 const TermsPage = lazy(() => import("./components/TermsPage")); 
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage")); 
 const CancellationRefundPage = lazy(() => import("./components/CancellationRefundPage")); 
 const ShippingDeliveryPage = lazy(() => import("./components/ShippingDeliveryPage")); 
-// --- END NEW LAZY IMPORTS ---
 
-// --- Lazy Load Admin Components ---
+// --- Admin Components ---
 const AdminLogin = lazy(() => import("./components/AdminLogin"));
 const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
 
@@ -59,7 +58,7 @@ const PublicLayout = () => (
               <About />
               <Mission />
               <Expertise />
-              <Review /> {/* ✅ Review Section added back here, below Expertise */}
+              <Review />
               <Footer />
             </>
           }
@@ -77,7 +76,7 @@ const PublicLayout = () => (
           path="/merchandise"
           element={
             <>
-              <Merchandise /> {/* ✅ New Merchandise Page Route */}
+              <Merchandise />
               <Footer />
             </>
           }
@@ -152,6 +151,7 @@ const PublicLayout = () => (
 
 const App = () => (
   <AuthProvider>
+    {/* 👇 SocketProvider MUST be inside AuthProvider (needs user) but outside CartProvider (needs socket) */}
     <SocketProvider>
       <CartProvider>
         <LoadingProvider>
