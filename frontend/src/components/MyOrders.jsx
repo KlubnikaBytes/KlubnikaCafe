@@ -1,6 +1,6 @@
 // src/components/MyOrders.jsx
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // Added Link import
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import OrderCard from "./OrderCard";
@@ -11,12 +11,13 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
-  const socket = useSocket();
+  
+  // FIX: Destructure socket from the context object
+  const { socket } = useSocket();
 
   // 1. Initial Fetch
   useEffect(() => {
     const fetchOrders = async () => {
-      // If no token, stop loading immediately (UI will handle the rest)
       if (!token) {
         setLoading(false);
         return;
@@ -39,7 +40,8 @@ const MyOrders = () => {
 
   // 2. Real-time Listener for status updates
   useEffect(() => {
-    if (!socket) return;
+    // Check if socket exists and is properly initialized
+    if (!socket || typeof socket.on !== 'function') return;
 
     const handleStatusUpdate = (payload) => {
       console.log("🔔 orderStatusUpdate received in MyOrders:", payload);
@@ -54,8 +56,10 @@ const MyOrders = () => {
       setOrders((prev) => {
         const idx = prev.findIndex((o) => o._id === updatedOrder._id);
         if (idx === -1) {
+          // If it's a new order we didn't have yet, add it to the top
           return [updatedOrder, ...prev];
         }
+        // Update the existing order in the list
         return prev.map((o) =>
           o._id === updatedOrder._id ? updatedOrder : o
         );
@@ -64,6 +68,7 @@ const MyOrders = () => {
 
     socket.on("orderStatusUpdate", handleStatusUpdate);
 
+    // Cleanup listener on unmount
     return () => {
       socket.off("orderStatusUpdate", handleStatusUpdate);
     };
@@ -92,15 +97,17 @@ const MyOrders = () => {
     }
   };
 
+  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen pt-40 text-center text-white">
-        Loading...
+        <div className="animate-spin inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+        <p>Loading your orders...</p>
       </div>
     );
   }
 
-  // --- NEW: CHECK IF LOGGED IN ---
+  // Not Logged In State
   if (!token) {
     return (
       <div className="container mx-auto min-h-screen pt-32 pb-20 px-4 flex flex-col items-center justify-center">
@@ -121,6 +128,7 @@ const MyOrders = () => {
     );
   }
 
+  // Main Content
   return (
     <div className="container mx-auto min-h-screen pt-32 pb-20 px-4">
       <h1 className="text-4xl font-extrabold text-center text-white mb-12">
@@ -128,9 +136,14 @@ const MyOrders = () => {
       </h1>
       <div className="max-w-3xl mx-auto space-y-6">
         {orders.length === 0 ? (
-          <p className="text-center text-gray-400 text-xl">
-            You haven't placed any orders yet.
-          </p>
+          <div className="text-center py-20 bg-gray-800/50 rounded-3xl border border-dashed border-gray-700">
+            <p className="text-gray-400 text-xl">
+              You haven't placed any orders yet.
+            </p>
+            <Link to="/menu" className="text-primary hover:underline mt-4 inline-block">
+              Browse Menu
+            </Link>
+          </div>
         ) : (
           orders.map((order) => (
             <OrderCard 
