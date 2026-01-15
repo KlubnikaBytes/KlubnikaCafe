@@ -8,7 +8,8 @@ const AdminOrderDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const socket = useSocket();
+  // 👇 FIX: Destructure the socket
+  const { socket } = useSocket();
   const adminToken = localStorage.getItem("klubnikaAdminToken");
 
   // 1. Initial Fetch
@@ -35,10 +36,14 @@ const AdminOrderDashboard = () => {
 
   // 2. Real-time Listeners
   useEffect(() => {
+    // Safety check: Ensure socket is connected before using
     if (!socket) return;
+
+    // Join the admin room
     socket.emit("adminJoin");
 
     const handleNewOrder = (newOrder) => {
+      console.log("🔔 New Order Received via Socket:", newOrder._id);
       setOrders((prev) => [newOrder, ...prev]);
     };
 
@@ -46,6 +51,8 @@ const AdminOrderDashboard = () => {
       const updatedOrder = payload?.order || payload;
       if (!updatedOrder?._id) return;
       
+      console.log("🔄 Order Status Updated via Socket:", updatedOrder._id, updatedOrder.status);
+
       setOrders((prev) =>
         prev.map((o) => (o._id === updatedOrder._id ? updatedOrder : o))
       );
@@ -58,7 +65,7 @@ const AdminOrderDashboard = () => {
       socket.off("newOrder", handleNewOrder);
       socket.off("orderStatusUpdate", handleStatusUpdate);
     };
-  }, [socket]);
+  }, [socket]); // Dependency ensures this runs when socket connects
 
   // 3. Update Status Function
   const handleUpdateStatus = async (orderId, newStatus) => {
