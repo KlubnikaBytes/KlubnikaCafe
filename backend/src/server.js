@@ -29,7 +29,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- CRITICAL MIDDLEWARE: Attach 'io' to every request ---
-// This allows your controllers (like productController) to access 'req.io'
 app.use((req, res, next) => {
   req.io = io;
   next();
@@ -37,18 +36,25 @@ app.use((req, res, next) => {
 
 // --- Socket.io Connection Events ---
 io.on('connection', (socket) => {
-  console.log(`✅ Socket Connected on Backend`);
+  console.log(`✅ Socket Connected on Backend: ${socket.id}`);
 
-  // Join Room Event (for specific user notifications if needed)
+  // Join Room Event
   socket.on('joinRoom', (userId) => {
     if (userId) {
-      socket.join(userId);
-      console.log(`👤 Socket joined room`);
+      // 👇 FIX: Force the Room ID to be a String
+      const roomName = String(userId);
+      
+      socket.join(roomName);
+      
+      // 👇 IMPROVED LOG: See exactly which room was joined
+      console.log(`👤 Socket ${socket.id} joined room: ${roomName}`);
+    } else {
+        console.warn(`⚠️ Socket ${socket.id} tried to join room with NO ID`);
     }
   });
   
   socket.on('disconnect', () => {
-    console.log(`❌ Socket Disconnected`);
+    console.log(`❌ Socket Disconnected: ${socket.id}`);
   });
 });
 
@@ -70,5 +76,4 @@ app.use('/api/orders', orderRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-// NOTE: We use server.listen instead of app.listen to make sockets work
 server.listen(PORT, () => console.log(`🚀 Server running at port ${PORT}`));
