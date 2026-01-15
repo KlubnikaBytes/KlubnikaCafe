@@ -17,7 +17,8 @@ const Dishes = () => {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
 
-  const socket = useSocket(); // <--- use shared socket
+  // 👇 1. Destructure socket here (The Fix)
+  const { socket } = useSocket(); 
 
   // FETCH DATA
   useEffect(() => {
@@ -39,6 +40,7 @@ const Dishes = () => {
 
   // SOCKET EVENTS
   useEffect(() => {
+    // 👇 2. Check if socket exists before using it
     if (!socket) return;
 
     console.log("✅ Using shared socket in Dishes:", socket.id);
@@ -76,7 +78,7 @@ const Dishes = () => {
     return () => {
       socket.off("stockUpdate", handleStockUpdate);
     };
-  }, [socket]);
+  }, [socket]); // 👇 3. Add socket to dependencies
 
   // SCROLL LOGIC
   const scroll = (scrollOffset) => {
