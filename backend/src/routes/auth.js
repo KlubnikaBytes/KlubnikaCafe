@@ -3,7 +3,6 @@ const {
   sendSignupOtp,
   verifySignup,
   login,
-<<<<<<< HEAD
   deliveryLogin,
   sendLoginOtp,
   loginWithOtp,
@@ -50,24 +49,6 @@ router.post('/toggle-availability', authenticateToken, toggleAvailability);
 /* -------------------------------------------------------------------------- */
 
 // Dev-only (Be careful with this!)
-=======
-  sendLoginOtp, // <--- New
-  loginWithOtp, // <--- New
-  deleteAllData,
-} = require('../controllers/authController');
-const router = express.Router();
-
-// Signup flow
-router.post('/send-signup-otp', sendSignupOtp);
-router.post('/verify-signup', verifySignup);
-
-// Login flows
-router.post('/login', login);
-router.post('/send-login-otp', sendLoginOtp); // <--- New Route
-router.post('/login-with-otp', loginWithOtp); // <--- New Route
-
-// Dev-only
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 router.delete('/delete-all-data', deleteAllData);
 
 module.exports = router;
