@@ -15,11 +15,6 @@ const instance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-<<<<<<< HEAD
-// ✅ UPDATED PDF GENERATOR
-=======
-// ✅ UPDATED PDF GENERATOR (Now includes Delivery Charge Row & Note)
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 const generateInvoicePdfBuffer = (order) =>
   new Promise((resolve, reject) => {
     try {
@@ -85,12 +80,6 @@ const generateInvoicePdfBuffer = (order) =>
       y += 20;
       doc.text("GST (5%):", 350, y);
       doc.text(`Rs. ${order.gstAmount || (order.totalAmount - (order.totalAmount / 1.05)).toFixed(2)}`, 400, y, { align: "right" });
-
-<<<<<<< HEAD
-      // 3. Delivery Charge
-=======
-      // 3. ✅ DELIVERY CHARGE ROW (Fixed)
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
       y += 20;
       doc.text("Delivery Charge:", 350, y);
       const delCharge = order.deliveryCharge || 0;
@@ -102,12 +91,6 @@ const generateInvoicePdfBuffer = (order) =>
       doc.fontSize(14).font("Helvetica-Bold");
       doc.text("Grand Total:", 300, y);
       doc.text(`Rs. ${order.totalAmount}`, 400, y, { align: "right" });
-
-<<<<<<< HEAD
-      // Note
-=======
-      // ✅ DISCLAIMER NOTE AT BOTTOM
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
       doc.moveDown(2);
       doc.fontSize(9).fillColor('red').font("Helvetica-Oblique");
       doc.text("* Note: Delivery charge may change based on the distance.", 50, doc.y + 20, { align: "center" });
@@ -160,11 +143,6 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
-// @desc    Get my orders (Customer)
-=======
-// @desc    Get my orders
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 exports.getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id }).sort({
@@ -176,7 +154,6 @@ exports.getMyOrders = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
 // ✅ UPDATED: Robust Get Assigned Orders (Case Insensitive + Logs)
 exports.getAssignedOrders = async (req, res) => {
   try {
@@ -232,11 +209,6 @@ exports.getAssignedOrders = async (req, res) => {
 // @desc    Update status (Admin) & Send Notifications
 exports.updateOrderStatus = async (req, res) => {
   const { status, deliveryBoyId } = req.body; 
-=======
-// @desc    Update status (Admin) & Send Notifications
-exports.updateOrderStatus = async (req, res) => {
-  const { status } = req.body;
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
   const io = req.io;
 
   try {
@@ -247,15 +219,11 @@ exports.updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ error: "Order not found" });
 
     order.status = status;
-<<<<<<< HEAD
-
     // Save assignment if provided
     if (deliveryBoyId) {
       order.deliveryBoyId = deliveryBoyId;
     }
 
-=======
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
     await order.save();
     await order.populate("user", "name email mobile");
 
@@ -263,14 +231,10 @@ exports.updateOrderStatus = async (req, res) => {
     io.to(order.user._id.toString()).emit("orderStatusUpdate", order);
     io.to("admins").emit("orderStatusUpdate", order);
 
-<<<<<<< HEAD
     // Notify the specific delivery boy's room
     if (order.deliveryBoyId) {
        io.to(order.deliveryBoyId.toString()).emit("newAssignment", order);
     }
-
-=======
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
     const shortOrderId = order._id.toString().slice(-6).toUpperCase();
     const trackingLink = "https://www.klubnikacafe.com/my-orders";
     const ratingsLink = "https://www.klubnikacafe.com/ratings";
@@ -446,9 +410,4 @@ exports.downloadInvoice = async (req, res) => {
     res.status(500).json({ error: "Error generating invoice" });
   }
 };
-
-<<<<<<< HEAD
 exports.generateInvoicePdfBuffer = generateInvoicePdfBuffer;
-=======
-exports.generateInvoicePdfBuffer = generateInvoicePdfBuffer;
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
