@@ -8,11 +8,19 @@ const { sendSMS } = require('../utils/smsSender.js');
 const Product = require('../models/Product.js'); 
 
 /* -------------------------------------------------------------------------- */
+<<<<<<< HEAD
 /* SIGNUP LOGIC (Generic / Customer)                                          */
 /* -------------------------------------------------------------------------- */
 
 exports.sendSignupOtp = async (req, res) => {
   const { email, password, name, mobile, verifyMethod, role, vehicleDetails } = req.body;
+=======
+/* SIGNUP LOGIC                                */
+/* -------------------------------------------------------------------------- */
+
+exports.sendSignupOtp = async (req, res) => {
+  const { email, password, name, mobile, verifyMethod } = req.body;
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 
   try {
     const existingVerifiedUser = await User.findOne({ 
@@ -28,7 +36,10 @@ exports.sendSignupOtp = async (req, res) => {
     const otpExpires = Date.now() + 10 * 60 * 1000; 
     const hashed = await bcrypt.hash(password, 10);
 
+<<<<<<< HEAD
     // Upsert user (Create or Update if unverified)
+=======
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
     await User.findOneAndUpdate(
       { $or: [{ email }, { mobile }] },
       {
@@ -39,18 +50,35 @@ exports.sendSignupOtp = async (req, res) => {
         signupOtp: otp,
         signupOtpExpires: otpExpires,
         isVerified: false,
+<<<<<<< HEAD
         role: role || 'customer', // Default to customer
         vehicleDetails: vehicleDetails || {} 
+=======
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
       },
       { new: true, upsert: true }
     );
 
     if (verifyMethod === 'email') {
+<<<<<<< HEAD
       await sendEmail(email, 'Your Klubnika Signup OTP', `OTP: ${otp}`, `<p>OTP: <strong>${otp}</strong></p>`);
       res.status(200).json({ message: `OTP sent to ${email}` });
     } else {
       await sendSMS(mobile, otp);
       res.status(200).json({ message: `OTP sent to ${mobile}` });
+=======
+      const subject = 'Your Klubnika Signup OTP';
+      const text = `OTP: ${otp}`;
+      const html = `<p>OTP: <strong>${otp}</strong></p>`;
+      await sendEmail(email, subject, text, html);
+      res.status(200).json({ message: `OTP sent to ${email}` });
+
+    } else if (verifyMethod === 'mobile') {
+      await sendSMS(mobile, otp);
+      res.status(200).json({ message: `OTP sent to ${mobile}` });
+    } else {
+      res.status(400).json({ error: 'Invalid verification method' });
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
     }
 
   } catch (error) {
@@ -63,7 +91,14 @@ exports.sendSignupOtp = async (req, res) => {
 exports.verifySignup = async (req, res) => {
   const { email, otp } = req.body;
   try {
+<<<<<<< HEAD
     const user = await User.findOne({ email });
+=======
+    // Attempt to find user by email first, or handle mobile logic if needed
+    // For this fix, we assume the user passes email or we find by the OTP if unique
+    // To keep it simple and robust for now:
+    const user = await User.findOne({ email }); // OR logic can be added if needed
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 
     if (!user) return res.status(400).json({ error: 'User not found' });
     if (user.isVerified) return res.status(400).json({ error: 'User already verified' });
@@ -82,6 +117,7 @@ exports.verifySignup = async (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
+<<<<<<< HEAD
 /* DELIVERY PARTNER SPECIFIC LOGIC (Signup & Login)                           */
 /* -------------------------------------------------------------------------- */
 
@@ -218,6 +254,9 @@ exports.deliveryLogin = async (req, res) => {
 
 /* -------------------------------------------------------------------------- */
 /* LOGIN LOGIC (Generic / Customer)                                           */
+=======
+/* LOGIN LOGIC                                 */
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 /* -------------------------------------------------------------------------- */
 
 exports.login = async (req, res) => {
@@ -225,10 +264,13 @@ exports.login = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: 'User not found' });
+<<<<<<< HEAD
     
     // ⚠️ CHANGED: We REMOVED the block that prevented 'delivery' roles from logging in here.
     // Now, a delivery partner can ALSO log in as a customer to order food.
     
+=======
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
     if (!user.isVerified) return res.status(403).json({ error: 'Account not verified' });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -244,6 +286,10 @@ exports.login = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
+=======
+// --- THIS IS THE MISSING PART causing your error ---
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 exports.sendLoginOtp = async (req, res) => {
   const { mobile } = req.body;
   try {
@@ -263,6 +309,10 @@ exports.sendLoginOtp = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
+=======
+// --- THIS IS ALSO NEEDED ---
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 exports.loginWithOtp = async (req, res) => {
   const { mobile, otp } = req.body;
   try {
@@ -295,6 +345,7 @@ exports.deleteAllData = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
+<<<<<<< HEAD
 };
 
 // ✅ TOGGLE AVAILABILITY (For Delivery App)
@@ -316,4 +367,6 @@ exports.toggleAvailability = async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
   }
+=======
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 };

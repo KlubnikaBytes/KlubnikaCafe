@@ -27,7 +27,11 @@ const orderSchema = new mongoose.Schema({
     default: 0 
   }, 
   
+<<<<<<< HEAD
   // ✅ Field required to store delivery cost
+=======
+  // ✅ FIELD REQUIRED TO STORE THE DATA
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
   deliveryCharge: { 
     type: Number, 
     default: 0 
@@ -54,8 +58,11 @@ const orderSchema = new mongoose.Schema({
   tableNumber: { type: String, required: false },
 
   deliveryAddress: { type: String, required: false },
+<<<<<<< HEAD
   
   // ✅ Coordinates for Google Maps Navigation
+=======
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
   deliveryCoords: {
     lat: { type: Number, required: false },
     lng: { type: Number, required: false },
@@ -63,6 +70,7 @@ const orderSchema = new mongoose.Schema({
 
   paymentId: { type: String, required: false },
   razorpayOrderId: { type: String, required: false },
+<<<<<<< HEAD
   paymentMethod: { type: String, default: 'Online' },
 
   // ✅ CRITICAL: Links the order to a specific Delivery Partner
@@ -74,3 +82,9 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);
+=======
+  paymentMethod: { type: String, default: 'Online' }
+}, { timestamps: true });
+
+module.exports = mongoose.model('Order', orderSchema);
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c

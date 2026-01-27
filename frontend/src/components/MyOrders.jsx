@@ -158,4 +158,8 @@ const MyOrders = () => {
   );
 };
 
+<<<<<<< HEAD
 export default MyOrders;
+=======
+export default MyOrders;
+>>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
