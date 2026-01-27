@@ -1,0 +1,14 @@
+# Ignore node modules for both backend and frontend
+backend/node_modules/
+frontend/node_modules/
+
+# Ignore environment files
+backend/.env
+frontend/.env
+
+# Optional: ignore lock files
+# backend/package-lock.json
+# frontend/package-lock.json
+
+# Logs
+*.log
