@@ -74,13 +74,8 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes); 
 
-<<<<<<< HEAD
-
+// Server Listen
 const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, () => console.log(`🚀 Server running at port ${PORT}`));
-=======
-const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, () => console.log(`🚀 Server running at port ${PORT}`));
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+server.listen(PORT, () => {
+  console.log(`🚀 Server running at port ${PORT}`);
+});
