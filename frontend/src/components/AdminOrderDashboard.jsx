@@ -6,21 +6,14 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 const AdminOrderDashboard = () => {
   const [orders, setOrders] = useState([]);
-<<<<<<< HEAD
   const [deliveryBoys, setDeliveryBoys] = useState([]);
   const [loading, setLoading] = useState(true);
 
-=======
-  const [loading, setLoading] = useState(true);
-
-  // 👇 FIX: Destructure the socket
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
   const { socket } = useSocket();
   const adminToken = localStorage.getItem("klubnikaAdminToken");
 
   // 1. Initial Fetch
   useEffect(() => {
-<<<<<<< HEAD
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -50,62 +43,29 @@ const AdminOrderDashboard = () => {
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
         setDeliveryBoys([]); 
-=======
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`${API_URL}/orders`, {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        });
-        const data = await res.json();
-        // Sort orders: Newest first
-        const sortedOrders = (data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setOrders(sortedOrders);
-      } catch (err) {
-        console.error("Failed to fetch orders", err);
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+
       } finally {
         setLoading(false);
       }
     };
-
-<<<<<<< HEAD
     if (adminToken) fetchData();
-=======
-    if (adminToken) fetchOrders();
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+
   }, [adminToken]);
 
   // 2. Real-time Listeners
   useEffect(() => {
-<<<<<<< HEAD
     if (!socket) return;
 
     socket.emit("adminJoin");
 
     const handleNewOrder = (newOrder) => {
-=======
-    // Safety check: Ensure socket is connected before using
-    if (!socket) return;
 
-    // Join the admin room
-    socket.emit("adminJoin");
-
-    const handleNewOrder = (newOrder) => {
-      console.log("🔔 New Order Received via Socket:", newOrder._id);
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
       setOrders((prev) => [newOrder, ...prev]);
     };
 
     const handleStatusUpdate = (payload) => {
       const updatedOrder = payload?.order || payload;
       if (!updatedOrder?._id) return;
-<<<<<<< HEAD
-=======
-      
-      console.log("🔄 Order Status Updated via Socket:", updatedOrder._id, updatedOrder.status);
-
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
       setOrders((prev) =>
         prev.map((o) => (o._id === updatedOrder._id ? updatedOrder : o))
       );
@@ -118,17 +78,11 @@ const AdminOrderDashboard = () => {
       socket.off("newOrder", handleNewOrder);
       socket.off("orderStatusUpdate", handleStatusUpdate);
     };
-<<<<<<< HEAD
   }, [socket]);
 
   // 3. Update Status Function
   const handleUpdateStatus = async (orderId, newStatus, deliveryBoyId = null) => {
-=======
-  }, [socket]); // Dependency ensures this runs when socket connects
 
-  // 3. Update Status Function
-  const handleUpdateStatus = async (orderId, newStatus) => {
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
     try {
       const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
         method: "PUT",
@@ -136,7 +90,6 @@ const AdminOrderDashboard = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${adminToken}`,
         },
-<<<<<<< HEAD
         body: JSON.stringify({ 
             status: newStatus,
             deliveryBoyId: deliveryBoyId 
@@ -146,16 +99,7 @@ const AdminOrderDashboard = () => {
       if (!res.ok) throw new Error("Failed to update status");
       const updatedOrder = await res.json(); 
 
-=======
-        body: JSON.stringify({ status: newStatus }),
-      });
 
-      if (!res.ok) throw new Error("Failed to update status");
-      
-      const updatedOrder = await res.json(); 
-
-      // Immediate UI Update
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
       setOrders((prev) =>
         prev.map((o) => (o._id === orderId ? updatedOrder : o))
       );
@@ -189,10 +133,6 @@ const AdminOrderDashboard = () => {
         const responseData = await res.json();
         const cancelledOrder = responseData.order || responseData; 
 
-<<<<<<< HEAD
-=======
-        // Immediate UI Update
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
         setOrders((prev) =>
             prev.map((o) => (o._id === orderId ? cancelledOrder : o))
         );
@@ -225,10 +165,7 @@ const AdminOrderDashboard = () => {
         <AdminOrderCard
           key={order._id}
           order={order}
-<<<<<<< HEAD
           deliveryBoys={deliveryBoys} 
-=======
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
           onUpdateStatus={handleUpdateStatus}
           onCancelOrder={handleCancelOrder}
         />
@@ -237,28 +174,16 @@ const AdminOrderDashboard = () => {
   );
 };
 
-<<<<<<< HEAD
 const AdminOrderCard = ({ order, deliveryBoys, onUpdateStatus, onCancelOrder }) => {
   const { status } = order;
   const isDineIn = order.orderType === 'Dine-in';
-  
   const [showAssign, setShowAssign] = useState(false);
   const [selectedBoy, setSelectedBoy] = useState("");
-
-=======
-const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
-  const { status } = order;
-  const isDineIn = order.orderType === 'Dine-in';
-  
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
   const paymentMethod = order.paymentMethod || "Unknown";
-  
   const isCOD = paymentMethod.includes("Cash on Delivery");
   const isPayAtCounter = paymentMethod.includes("Pay at Counter");
-
   let badgeColor = "bg-green-600 text-white border-transparent";
   let badgeText = "💳 ONLINE PAID";
-
   if (isCOD) {
       badgeColor = "bg-transparent text-yellow-400 border border-yellow-400";
       badgeText = "💰 CASH ON DELIVERY";
@@ -276,29 +201,20 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
     }
   };
 
-<<<<<<< HEAD
   const parseItemPrice = (priceVal) => {
     if (!priceVal) return 0;
     if (typeof priceVal === 'number') return priceVal;
-=======
-  // ✅ HELPER: Safely parse price (handles Strings, "Rs.", and Numbers)
-  const parseItemPrice = (priceVal) => {
-    if (!priceVal) return 0;
-    if (typeof priceVal === 'number') return priceVal;
-    // Remove anything that isn't a digit or a dot
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+
     const cleanString = priceVal.toString().replace(/[^0-9.]/g, '');
     return parseFloat(cleanString) || 0;
   };
 
-<<<<<<< HEAD
   // ✅ FILTER: Only show Delivery Boys who are ONLINE
   // We check if 'isAvailable' is true. 
   // If the field is missing (old data), we default to false (not shown).
   const availableDeliveryBoys = deliveryBoys.filter(boy => boy.isAvailable === true);
 
-=======
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+
   return (
     <div className={`rounded-lg shadow-lg p-5 flex flex-col animate-fadeIn border transition-colors ${isDineIn ? 'bg-gray-800 border-purple-500 hover:border-purple-400' : 'bg-gray-800 border-gray-700 hover:border-rose-500'}`}>
       
@@ -341,16 +257,10 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
                 <p className="text-gray-300 text-sm leading-snug break-words mb-2 text-left">
                     {order.deliveryAddress || "No address provided"}
                 </p>
-
-<<<<<<< HEAD
                 {(order.deliveryCoords) && (
                     <a 
                         href={`https://www.google.com/maps/search/?api=1&query=${order.deliveryCoords?.lat},${order.deliveryCoords?.lng}`}
-=======
-                {(order.googleMapsLink || order.location || order.deliveryCoords) && (
-                    <a 
-                        href={order.googleMapsLink || `https://www.google.com/maps/search/?api=1&query=${order.deliveryCoords?.lat},${order.deliveryCoords?.lng}`}
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded transition-colors"
@@ -368,23 +278,12 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
         <div className="max-h-32 overflow-y-auto pr-1">
             <ul className="list-disc list-inside text-gray-300 text-sm">
             {order.items.map((item, i) => {
-<<<<<<< HEAD
                 const cleanPrice = parseItemPrice(item.price);
                 const qty = Number(item.quantity) || 1;
                 return (
                     <li key={i} className="flex justify-between">
                         <span>{qty} x {item.title}</span>
                         <span className="text-gray-500 text-xs">₹{(cleanPrice * qty).toFixed(2)}</span>
-=======
-                // ✅ FIX: Use the robust helper function
-                const cleanPrice = parseItemPrice(item.price);
-                const qty = Number(item.quantity) || 1;
-                
-                return (
-                    <li key={i} className="flex justify-between">
-                       <span>{qty} x {item.title}</span>
-                       <span className="text-gray-500 text-xs">₹{(cleanPrice * qty).toFixed(2)}</span>
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
                     </li>
                 );
             })}
@@ -412,8 +311,6 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
             <button onClick={() => onCancelOrder(order._id, order.paymentMethod)} className="w-full py-1 text-red-500 border border-red-500 rounded hover:bg-red-500 hover:text-white text-xs transition-colors">Emergency Cancel</button>
           </div>
         )}
-        
-<<<<<<< HEAD
         {/* ASSIGNMENT LOGIC */}
         {status === "Preparing" && (
             <div className="space-y-2">
@@ -492,35 +389,11 @@ const AdminOrderCard = ({ order, onUpdateStatus, onCancelOrder }) => {
                  }
                </button>
             </div>
-=======
-        {status === "Preparing" && (
-           <button 
-             onClick={() => onUpdateStatus(order._id, "Out for Delivery")} 
-             className="w-full py-2 bg-yellow-500 text-gray-900 rounded-lg font-semibold hover:bg-yellow-600 text-sm shadow-lg transition-transform active:scale-95"
-           >
-             {isDineIn ? "Mark Ready to Serve" : "Out for Delivery"}
-           </button>
-        )}
-        
-        {status === "Out for Delivery" && (
-           <button 
-             onClick={() => onUpdateStatus(order._id, "Delivered")} 
-             className={`w-full py-2 rounded-lg font-semibold text-sm shadow-lg transition-transform active:scale-95 ${isCOD ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-           >
-             {isCOD 
-                ? "💰 Collect Cash & Delivered" 
-                : (isDineIn ? "Mark Served" : "Mark Delivered")
-             }
-           </button>
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
         )}
       </div>
     </div>
   );
 };
 
-<<<<<<< HEAD
 export default AdminOrderDashboard;
-=======
-export default AdminOrderDashboard;
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+
