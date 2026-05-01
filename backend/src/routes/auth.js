@@ -3,17 +3,17 @@ const {
   sendSignupOtp,
   verifySignup,
   login,
-<<<<<<< HEAD
   deliveryLogin,
   sendLoginOtp,
   loginWithOtp,
   deleteAllData,
   sendDeliverySignupOtp,
   verifyDeliverySignup,
-  toggleAvailability // ✅ 1. Make sure this is imported
+  toggleAvailability, // ✅ 1. Existing toggle import
+  updateFcmToken      // ✅ 2. ADDED: Import the token update controller
 } = require('../controllers/authController');
 
-// 👇 ✅ 2. THIS WAS MISSING! You must import the middleware to use it.
+// 👇 Ensure middleware is imported correctly
 const { authenticateToken } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -46,28 +46,18 @@ router.post('/verify-delivery-signup', verifyDeliverySignup);
 router.post('/toggle-availability', authenticateToken, toggleAvailability);
 
 /* -------------------------------------------------------------------------- */
+/* GENERAL AUTHENTICATED ROUTES (New)                                         */
+/* -------------------------------------------------------------------------- */
+
+// ✅ 3. ADDED: Route to save FCM Token (Critical for Notifications)
+// This is called by the Flutter app immediately after login
+router.put('/update-fcm', authenticateToken, updateFcmToken);
+
+/* -------------------------------------------------------------------------- */
 /* DEV / ADMIN ROUTES                                                         */
 /* -------------------------------------------------------------------------- */
 
 // Dev-only (Be careful with this!)
-=======
-  sendLoginOtp, // <--- New
-  loginWithOtp, // <--- New
-  deleteAllData,
-} = require('../controllers/authController');
-const router = express.Router();
-
-// Signup flow
-router.post('/send-signup-otp', sendSignupOtp);
-router.post('/verify-signup', verifySignup);
-
-// Login flows
-router.post('/login', login);
-router.post('/send-login-otp', sendLoginOtp); // <--- New Route
-router.post('/login-with-otp', loginWithOtp); // <--- New Route
-
-// Dev-only
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 router.delete('/delete-all-data', deleteAllData);
 
 module.exports = router;

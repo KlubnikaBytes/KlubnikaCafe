@@ -16,10 +16,10 @@ const app = express();
 // Create HTTP Server
 const server = http.createServer(app);
 
-// Initialize Socket.IO
+// Initialize Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins (adjust for production if needed)
+    origin: "*", // ⚠️ In production, replace '*' with your frontend URL (e.g., "https://klubnikacafe.com")
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
@@ -29,6 +29,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- CRITICAL MIDDLEWARE: Attach 'io' to every request ---
+// This allows you to use `req.io` in your controllers (payment, orders, etc.)
 app.use((req, res, next) => {
   req.io = io;
   next();
@@ -36,25 +37,35 @@ app.use((req, res, next) => {
 
 // --- Socket.io Connection Events ---
 io.on('connection', (socket) => {
-  console.log(`✅ Socket Connected on Backend: ${socket.id}`);
+  console.log(`✅ [SOCKET] New Connection: ${socket.id}`);
 
-  // Join Room Event
+  // 1. Customer/Driver Room Join
+  // Frontend calls: socket.emit('joinRoom', userId);
   socket.on('joinRoom', (userId) => {
     if (userId) {
-      // 👇 FIX: Force the Room ID to be a String
+      // 🔥 CRITICAL FIX: Ensure ID is strictly a string to match Controller logic
       const roomName = String(userId);
       
       socket.join(roomName);
       
-      // 👇 IMPROVED LOG: See exactly which room was joined
-      console.log(`👤 Socket ${socket.id} joined room: ${roomName}`);
+      // Emit back a confirmation (Optional, but good for debugging frontend)
+      socket.emit('joinedRoom', roomName);
+      console.log(`👤 [SOCKET] Socket ${socket.id} joined User/Driver Room: ${roomName}`);
     } else {
-        console.warn(`⚠️ Socket ${socket.id} tried to join room with NO ID`);
+      console.warn(`⚠️ [SOCKET] Socket ${socket.id} tried to join room with MISSING ID`);
     }
   });
-  
+
+  // 2. Admin Room Join
+  // Frontend calls: socket.emit('adminJoin');
+  socket.on('adminJoin', () => {
+    socket.join('admins'); 
+    console.log(`🛡️ [SOCKET] Socket ${socket.id} joined ADMIN Room`);
+  });
+
+  // 3. Disconnect
   socket.on('disconnect', () => {
-    console.log(`❌ Socket Disconnected: ${socket.id}`);
+    // console.log(`❌ [SOCKET] Disconnected: ${socket.id}`); // Uncomment if logs get too noisy
   });
 });
 
@@ -74,13 +85,9 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes); 
 
-<<<<<<< HEAD
-
+// Server Listen
 const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, () => console.log(`🚀 Server running at port ${PORT}`));
-=======
-const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, () => console.log(`🚀 Server running at port ${PORT}`));
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Socket.io is initialized and listening`);
+});

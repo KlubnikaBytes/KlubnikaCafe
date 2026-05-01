@@ -1,13 +1,6 @@
-<<<<<<< HEAD
 const jwt = require('jsonwebtoken');
 const Order = require('../models/Order');
 const User = require('../models/User'); // ✅ THIS WAS MISSING!
-=======
-// backend/src/controllers/adminController.js
-
-const jwt = require('jsonwebtoken');
-const Order = require('../models/Order');
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
 
 // Sample hardcoded admin credentials
 const ADMIN_USERNAME = 'klubnika_cafeadmin';
@@ -42,18 +35,10 @@ exports.getInvoiceStats = async (req, res) => {
       {
         $match: {
           $and: [
-<<<<<<< HEAD
             // 1. STRICTLY Exclude Cancelled Orders
             { status: { $not: /cancelled/i } }, 
 
             // 2. Exclude Pending Cash Orders
-=======
-            // 1. STRICTLY Exclude Cancelled Orders (Case Insensitive Regex)
-            { status: { $not: /cancelled/i } }, 
-
-            // 2. Logic: If Payment is Cash/COD, only count if status is NOT 'Pending'.
-            // (i.e. Exclude if Payment contains "Cash" AND Status is "Pending")
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
             {
               $nor: [
                 {
@@ -102,14 +87,7 @@ exports.getMonthlyReport = async (req, res) => {
     const orders = await Order.find({
       createdAt: { $gte: startDate, $lte: endDate },
       $and: [
-<<<<<<< HEAD
         { status: { $not: /cancelled/i } },
-=======
-        // 1. STRICTLY Exclude Cancelled
-        { status: { $not: /cancelled/i } },
-        
-        // 2. Exclude Pending Cash Orders
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
         {
           $nor: [
             {
@@ -129,7 +107,6 @@ exports.getMonthlyReport = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch report data' });
   }
 };
-<<<<<<< HEAD
 
 // --- 4. Update User Role ---
 exports.updateUserRole = async (req, res) => {
@@ -172,5 +149,4 @@ exports.getDeliveryBoys = async (req, res) => {
     res.status(500).json({ error: "Server error fetching delivery staff" });
   }
 };
-=======
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
+

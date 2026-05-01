@@ -1,4 +1,3 @@
-// src/components/MyOrders.jsx
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -10,12 +9,11 @@ const API_URL = import.meta.env.VITE_API_URL;
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { token } = useAuth();
+  const { token, user } = useAuth(); // ✅ Ensure 'user' is destructured if available in AuthContext
   
-  // FIX: Destructure socket from the context object
   const { socket } = useSocket();
 
-  // 1. Initial Fetch
+  // 1. Initial Fetch of Orders
   useEffect(() => {
     const fetchOrders = async () => {
       if (!token) {
@@ -38,41 +36,49 @@ const MyOrders = () => {
     fetchOrders();
   }, [token]);
 
-  // 2. Real-time Listener for status updates
+  // 2. Real-time Listener & Room Management
   useEffect(() => {
-    // Check if socket exists and is properly initialized
-    if (!socket || typeof socket.on !== 'function') return;
+    if (!socket || !token) return;
 
+    // --- 📡 ROOM JOINING LOGIC ---
+    // Try to get userId from AuthContext first, then fallback to localStorage
+    const userId = user?._id || localStorage.getItem("userId");
+
+    if (userId) {
+      console.log(`📡 [SOCKET] MyOrders: Joining private room ${userId}`);
+      socket.emit("joinRoom", userId);
+      
+      // Optional: Add a listener for successful join if your backend emits one
+      socket.on("joinedRoom", (roomId) => {
+        console.log(`✅ [SOCKET] Successfully confirmed in room: ${roomId}`);
+      });
+    } else {
+      console.warn("⚠️ [SOCKET] No userId found. Real-time updates may not work.");
+    }
+
+    // --- 🔔 STATUS UPDATE LISTENER ---
     const handleStatusUpdate = (payload) => {
-      console.log("🔔 orderStatusUpdate received in MyOrders:", payload);
-
+      console.log("🔔 [SOCKET] Status Update Received:", payload);
+      
+      // Handle payload regardless of whether it's the raw order or wrapped in an object
       const updatedOrder = payload?.order || payload;
 
-      if (!updatedOrder || !updatedOrder._id) {
-        console.warn("⚠️ Invalid orderStatusUpdate payload:", payload);
-        return;
-      }
-
-      setOrders((prev) => {
-        const idx = prev.findIndex((o) => o._id === updatedOrder._id);
-        if (idx === -1) {
-          // If it's a new order we didn't have yet, add it to the top
-          return [updatedOrder, ...prev];
-        }
-        // Update the existing order in the list
-        return prev.map((o) =>
-          o._id === updatedOrder._id ? updatedOrder : o
+      if (updatedOrder && updatedOrder._id) {
+        setOrders((prev) =>
+          prev.map((o) => (o._id === updatedOrder._id ? updatedOrder : o))
         );
-      });
+      }
     };
 
     socket.on("orderStatusUpdate", handleStatusUpdate);
 
-    // Cleanup listener on unmount
+    // Cleanup on unmount
     return () => {
+      console.log("🚫 [SOCKET] Cleaning up MyOrders listeners");
       socket.off("orderStatusUpdate", handleStatusUpdate);
+      if (socket.off) socket.off("joinedRoom");
     };
-  }, [socket]);
+  }, [socket, token, user]); // Added user to dependencies
 
   // 3. Cancel Handler
   const handleCancelOrder = async (orderId) => {
@@ -90,6 +96,9 @@ const MyOrders = () => {
       if (!res.ok) throw new Error(data.error || "Failed to cancel");
       
       alert("Order cancelled successfully. Refund initiated.");
+      
+      // Real-time local update in case socket hasn't fired yet
+      setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'Cancelled' } : o));
       
     } catch (err) {
       console.error(err);
@@ -158,8 +167,4 @@ const MyOrders = () => {
   );
 };
 
-<<<<<<< HEAD
 export default MyOrders;
-=======
-export default MyOrders;
->>>>>>> 459c8bee7edfd3ea1b087d84054ec5e7eb7ef00c
